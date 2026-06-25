@@ -244,13 +244,25 @@ const formatPassengerSummary = (passengerNames: string) =>
     })
     .filter(Boolean)
 
+const MAX_LOGO_BYTES = 2 * 1024 * 1024
+
+const isAllowedImageUrl = (url: string) => {
+  try {
+    const parsed = new URL(url, window.location.origin)
+    return parsed.protocol === 'https:' || parsed.protocol === 'http:' || parsed.protocol === 'data:'
+  } catch {
+    return false
+  }
+}
+
 const getImageDataUrl = async (url: string) => {
-  if (!url) return ''
+  if (!url || !isAllowedImageUrl(url)) return ''
 
   try {
     const response = await fetch(url)
     if (!response.ok) return ''
     const blob = await response.blob()
+    if (!blob.type.startsWith('image/') || blob.size > MAX_LOGO_BYTES) return ''
 
     return await new Promise<string>((resolve) => {
       const reader = new FileReader()

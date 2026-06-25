@@ -19,11 +19,14 @@ const normalizeRemoteInvoice = (invoice: Invoice): Invoice => ({
   digitalService: invoice.digitalService ?? { itemName: '' },
 })
 
+const apiToken = import.meta.env.VITE_CRM_API_TOKEN as string | undefined
+
 const requestJson = async <T>(url: string, init?: RequestInit): Promise<T> => {
   const response = await fetch(url, {
     ...init,
     headers: {
       'Content-Type': 'application/json',
+      ...(apiToken ? { Authorization: `Bearer ${apiToken}` } : {}),
       ...(init?.headers ?? {}),
     },
   })

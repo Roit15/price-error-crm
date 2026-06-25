@@ -75,39 +75,27 @@ export const InvoiceFormPage = () => {
 
   const watchedValues = useWatch({ control: form.control })
   const invoiceType = watchedValues.invoiceType ?? 'FlightTicket'
-  const finalPriceRef = useRef<HTMLInputElement>(null)
-  const lastPricingEdit = useRef<'discount' | 'final'>('discount')
+  const totalFare = Number(watchedValues.pricing?.totalFare || 0)
+  const discountPercentage = Number(watchedValues.pricing?.discountPercentage || 0)
+  // While the user is actively editing the final price, the raw input is held in a draft.
+  // Otherwise the field mirrors the computed total derived from total fare and discount %.
+  const [finalPriceDraft, setFinalPriceDraft] = useState<string | null>(null)
 
-  const computedTotal = useMemo(() => {
-    const pricing = watchedValues.pricing
-    const totalFare = Number(pricing?.totalFare || 0)
-    const discountPercentage = Number(pricing?.discountPercentage || 0)
-    return Math.max(0, totalFare - Math.round(totalFare * (discountPercentage / 100)))
-  }, [watchedValues])
+  const computedTotal = useMemo(
+    () => Math.max(0, totalFare - Math.round(totalFare * (discountPercentage / 100))),
+    [totalFare, discountPercentage],
+  )
 
-  // Sync final price input when total fare or discount % changes
-  useEffect(() => {
-    if (lastPricingEdit.current === 'final') return
-    if (finalPriceRef.current) {
-      finalPriceRef.current.value = String(computedTotal)
-    }
-  }, [computedTotal])
+  const finalPriceValue = finalPriceDraft ?? String(computedTotal)
 
   const handleFinalPriceChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    lastPricingEdit.current = 'final'
-    const totalFare = Number(watchedValues.pricing?.totalFare || 0)
-    const finalPrice = Number(e.target.value || 0)
+    setFinalPriceDraft(e.target.value)
     if (totalFare <= 0) return
+    const finalPrice = Number(e.target.value || 0)
     const pct = Math.max(0, Math.min(100, ((totalFare - finalPrice) / totalFare) * 100))
     const rounded = Math.round(pct * 100) / 100
     form.setValue('pricing.discountPercentage', rounded, { shouldDirty: true })
-    // Reset flag after a tick so the useEffect above doesn't overwrite
-    requestAnimationFrame(() => { lastPricingEdit.current = 'discount' })
-  }, [watchedValues.pricing?.totalFare, form])
-
-  const handleDiscountChange = useCallback(() => {
-    lastPricingEdit.current = 'discount'
-  }, [])
+  }, [totalFare, form])
 
   useEffect(() => {
     const loadInvoice = async () => {
@@ -265,17 +253,17 @@ export const InvoiceFormPage = () => {
                     min={0}
                     max={100}
                     step="0.01"
-                    {...form.register('pricing.discountPercentage', { valueAsNumber: true, onChange: handleDiscountChange })}
+                    {...form.register('pricing.discountPercentage', { valueAsNumber: true })}
                   />
                 </div>
                 <label className="block">
                   <span className="mb-1.5 block text-sm font-bold text-slate-600">Final price</span>
                   <input
-                    ref={finalPriceRef}
                     type="number"
                     min={0}
-                    defaultValue={computedTotal}
+                    value={finalPriceValue}
                     onChange={handleFinalPriceChange}
+                    onBlur={() => setFinalPriceDraft(null)}
                     className="min-h-11 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-900 shadow-sm outline-none transition-all duration-200 placeholder:text-slate-400 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/15"
                   />
                 </label>

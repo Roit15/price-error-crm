@@ -22,5 +22,7 @@ Create a Supabase project, run `docs/supabase-schema.sql` in the SQL editor, the
 - `SUPABASE_URL` or `NEXT_PUBLIC_SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `SUPABASE_INVOICES_TABLE` optional, defaults to `invoices`
+- `CRM_API_TOKEN` required when the central database is configured. The `/api/invoices` endpoint uses the Supabase service-role key (which bypasses row level security), so it is protected by this shared token. Every request must send it as `Authorization: Bearer <token>` or `x-api-key`. Generate a long random value, e.g. `openssl rand -hex 32`.
+- `VITE_CRM_API_TOKEN` the same token, exposed to the frontend build so the app can authenticate to the API.
 
 After setting env vars, redeploy the app. Existing local invoices can be moved to the central DB with Settings & backup: export JSON from the browser that has the invoices, then import JSON after the central DB is configured.
