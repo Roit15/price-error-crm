@@ -1,5 +1,6 @@
 import { Link } from 'react-router'
 import { TrendingUp, TrendingDown, Minus, FileText, IndianRupee, Clock, Plane } from 'lucide-react'
+import { CentralDbBanner } from '../components/CentralDbBanner'
 import { InvoiceTable } from '../components/InvoiceTable'
 import { PageHeader } from '../components/PageHeader'
 import { buildDashboardStats } from '../domain/dashboard'
@@ -8,7 +9,7 @@ import { formatInr } from '../domain/pricing'
 import { useInvoices } from '../services/useInvoices'
 
 export const DashboardPage = () => {
-  const { invoices, isLoading } = useInvoices()
+  const { invoices, isLoading, error, reload } = useInvoices()
   const stats = buildDashboardStats(invoices)
 
   const trendPct =
@@ -46,7 +47,8 @@ export const DashboardPage = () => {
             </Link>
           }
         />
-        <section className="animate-slide-up glass-card flex flex-col items-center justify-center rounded-xl px-6 py-16 text-center">
+        {error ? <CentralDbBanner message={error} onRetry={() => void reload()} /> : null}
+        {error ? null : <section className="animate-slide-up glass-card flex flex-col items-center justify-center rounded-xl px-6 py-16 text-center">
           <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-100 to-orange-50">
             <FileText size={28} className="text-orange-500" />
           </div>
@@ -60,7 +62,7 @@ export const DashboardPage = () => {
           >
             Create first invoice
           </Link>
-        </section>
+        </section>}
       </>
     )
   }
@@ -79,6 +81,8 @@ export const DashboardPage = () => {
           </Link>
         }
       />
+
+      {error ? <CentralDbBanner message={error} onRetry={() => void reload()} /> : null}
 
       {/* ─── Stat Cards ─── */}
       <section className="stagger-children grid gap-4 md:grid-cols-2 xl:grid-cols-4">

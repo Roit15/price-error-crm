@@ -23,15 +23,19 @@ export const SettingsPage = () => {
   }
 
   const downloadBackup = async () => {
-    const backup = await exportInvoices()
-    const blob = new Blob([backup], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `price-error-backup-${new Date().toISOString().slice(0, 10)}.json`
-    link.click()
-    URL.revokeObjectURL(url)
-    setMessage('Backup exported successfully.')
+    try {
+      const backup = await exportInvoices()
+      const blob = new Blob([backup], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `price-error-backup-${new Date().toISOString().slice(0, 10)}.json`
+      link.click()
+      URL.revokeObjectURL(url)
+      setMessage('Backup exported successfully.')
+    } catch {
+      setMessage('Export failed — could not reach the central database. Your saved data is safe; please retry once the connection is restored.')
+    }
   }
 
   const importBackup = async (file?: File) => {
