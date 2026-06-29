@@ -18,7 +18,9 @@ const todayIsoDate = () => new Date().toISOString().slice(0, 10)
 
 export const createEmptyInvoice = async (): Promise<Invoice> => {
   const now = new Date().toISOString()
-  const invoices = await invoiceRepository.list()
+  // Numbering only needs existing invoices to avoid collisions; if the central database is briefly
+  // unreachable, fall back to an empty list so a new invoice can still be drafted offline.
+  const invoices = await invoiceRepository.list().catch(() => [] as Invoice[])
 
   return {
     id: crypto.randomUUID(),

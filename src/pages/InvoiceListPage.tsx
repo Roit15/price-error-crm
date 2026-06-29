@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { Search, SlidersHorizontal, FileText, BellRing } from 'lucide-react'
+import { CentralDbBanner } from '../components/CentralDbBanner'
 import { InvoiceTable } from '../components/InvoiceTable'
 import { PageHeader } from '../components/PageHeader'
 import { invoiceStatuses, invoiceStatusLabels, invoiceTypeLabels, invoiceTypes, type Invoice, type InvoiceStatus, type InvoiceType } from '../domain/invoice'
@@ -13,7 +14,7 @@ type TypeFilter = 'All' | InvoiceType
 type SortOption = 'Newest' | 'Oldest' | 'PaymentHighToLow' | 'PaymentLowToHigh'
 
 export const InvoiceListPage = () => {
-  const { invoices, isLoading, reload } = useInvoices()
+  const { invoices, isLoading, error, reload } = useInvoices()
   const [query, setQuery] = useState('')
   const [status, setStatus] = useState<StatusFilter>('All')
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('All')
@@ -98,6 +99,8 @@ export const InvoiceListPage = () => {
           </>
         }
       />
+
+      {error ? <CentralDbBanner message={error} onRetry={() => void reload()} /> : null}
 
       {/* ─── Filter Bar ─── */}
       <section className="animate-slide-up mb-4 glass-card rounded-xl p-4" style={{ animationDelay: '60ms' }}>
