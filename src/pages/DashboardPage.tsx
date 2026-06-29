@@ -1,5 +1,6 @@
+import { useState } from 'react'
 import { Link } from 'react-router'
-import { TrendingUp, TrendingDown, Minus, FileText, IndianRupee, Clock, Plane } from 'lucide-react'
+import { TrendingUp, TrendingDown, Minus, FileText, IndianRupee, Clock, Plane, X } from 'lucide-react'
 import { CentralDbBanner } from '../components/CentralDbBanner'
 import { InvoiceTable } from '../components/InvoiceTable'
 import { PageHeader } from '../components/PageHeader'
@@ -11,6 +12,7 @@ import { useInvoices } from '../services/useInvoices'
 export const DashboardPage = () => {
   const { invoices, isLoading, error, reload } = useInvoices()
   const stats = buildDashboardStats(invoices)
+  const [isPendingModalOpen, setIsPendingModalOpen] = useState(false)
 
   const trendPct =
     stats.lastMonthRevenue > 0
@@ -107,6 +109,7 @@ export const DashboardPage = () => {
           value={`${stats.pendingPaymentCount} / ${formatInr(stats.pendingPaymentValue)}`}
           gradient="from-orange-500 to-orange-700"
           iconBg="bg-orange-400"
+          onClick={() => setIsPendingModalOpen(true)}
         />
         <StatCard
           icon={<Plane size={18} />}
@@ -153,6 +156,39 @@ export const DashboardPage = () => {
         </div>
         <InvoiceTable invoices={stats.recentInvoices} />
       </section>
+
+      {/* ─── Pending Invoices Modal ─── */}
+      {isPendingModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/50 p-4 md:p-6">
+              <div>
+                <h2 className="text-xl font-black tracking-tight text-slate-950">Pending Payments</h2>
+                <p className="text-sm font-medium text-slate-500">Invoices awaiting full payment completion.</p>
+              </div>
+              <button
+                onClick={() => setIsPendingModalOpen(false)}
+                className="rounded-xl p-2 text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-700"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto p-4 md:p-6">
+              {stats.pendingInvoices.length > 0 ? (
+                <InvoiceTable invoices={stats.pendingInvoices} />
+              ) : (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
+                    <IndianRupee size={24} />
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-900">All caught up!</h3>
+                  <p className="mt-1 text-sm text-slate-500">There are no pending payments at the moment.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }
@@ -165,6 +201,7 @@ const StatCard = ({
   gradient,
   iconBg,
   trend,
+  onClick,
 }: {
   icon: React.ReactNode
   label: string
@@ -172,8 +209,14 @@ const StatCard = ({
   gradient: string
   iconBg: string
   trend?: number
-}) => (
-  <article className={`hover-lift rounded-xl bg-gradient-to-br ${gradient} p-5 text-white shadow-lg`}>
+  onClick?: () => void
+}) => {
+  const Component = onClick ? 'button' : 'article'
+  return (
+    <Component
+      onClick={onClick}
+      className={`hover-lift block w-full text-left rounded-xl bg-gradient-to-br ${gradient} p-5 text-white shadow-lg ${onClick ? 'cursor-pointer hover:shadow-xl' : ''}`}
+    >
     <div className="flex items-start justify-between">
       <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${iconBg} shadow-sm`}>
         {icon}
@@ -192,8 +235,9 @@ const StatCard = ({
     </div>
     <p className="mt-3 text-sm font-bold text-white/70">{label}</p>
     <p className="mt-1 text-2xl font-black">{value}</p>
-  </article>
+  </Component>
 )
+}
 
 /* ─── Status Breakdown Bar ─── */
 const statusColors: Record<InvoiceStatus, string> = {

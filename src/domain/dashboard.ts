@@ -14,6 +14,7 @@ export type DashboardStats = {
   thisMonthRevenue: number
   lastMonthRevenue: number
   recentInvoices: Invoice[]
+  pendingInvoices: Invoice[]
 }
 
 export type PaymentCategoryStats = {
@@ -71,6 +72,7 @@ export const buildDashboardStats = (invoices: Invoice[]): DashboardStats => {
     thisMonthRevenue: thisMonthCompleted.reduce((total, i) => total + i.pricing.total, 0),
     lastMonthRevenue: lastMonthCompleted.reduce((total, i) => total + i.pricing.total, 0),
     recentInvoices: sortedInvoices.slice(0, 5),
+    pendingInvoices: pendingPaymentInvoices,
   }
 }
 
