@@ -1,18 +1,28 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
-import { TrendingUp, TrendingDown, Minus, FileText, IndianRupee, Clock, Plane, X } from 'lucide-react'
+import { TrendingUp, TrendingDown, Minus, FileText, IndianRupee, Clock, Plane, X, BellRing } from 'lucide-react'
 import { CentralDbBanner } from '../components/CentralDbBanner'
 import { InvoiceTable } from '../components/InvoiceTable'
 import { PageHeader } from '../components/PageHeader'
 import { buildDashboardStats } from '../domain/dashboard'
 import { invoiceStatusLabels, type InvoiceStatus } from '../domain/invoice'
 import { formatInr } from '../domain/pricing'
+import { buildPendingPnrReminderUrl, getPendingPnrInvoices } from '../domain/whatsapp'
 import { useInvoices } from '../services/useInvoices'
 
 export const DashboardPage = () => {
   const { invoices, isLoading, error, reload } = useInvoices()
   const stats = buildDashboardStats(invoices)
   const [isPendingModalOpen, setIsPendingModalOpen] = useState(false)
+
+  const pendingPnrCount = getPendingPnrInvoices(invoices).length
+  const sendPnrReminder = () => {
+    if (pendingPnrCount === 0) {
+      window.alert('No pending PNR tickets to remind about.')
+      return
+    }
+    window.open(buildPendingPnrReminderUrl(invoices), '_blank', 'noopener,noreferrer')
+  }
 
   const trendPct =
     stats.lastMonthRevenue > 0
@@ -41,12 +51,24 @@ export const DashboardPage = () => {
           eyebrow="Operations"
           title="Dashboard"
           actions={
-            <Link
-              to="/invoices/new"
-              className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-orange-500/20 transition-all duration-200 hover:shadow-lg hover:shadow-orange-500/30 hover:-translate-y-0.5"
-            >
-              New Invoice
-            </Link>
+            <>
+              <button
+                type="button"
+                onClick={sendPnrReminder}
+                disabled={pendingPnrCount === 0}
+                title={pendingPnrCount === 0 ? 'No pending PNR tickets' : `Send a WhatsApp reminder for ${pendingPnrCount} pending PNR ticket(s)`}
+                className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-700 shadow-sm transition-all duration-200 hover:bg-emerald-100 hover:shadow disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <BellRing size={15} />
+                PNR Reminder{pendingPnrCount > 0 ? ` (${pendingPnrCount})` : ''}
+              </button>
+              <Link
+                to="/invoices/new"
+                className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-orange-500/20 transition-all duration-200 hover:shadow-lg hover:shadow-orange-500/30 hover:-translate-y-0.5"
+              >
+                New Invoice
+              </Link>
+            </>
           }
         />
         {error ? <CentralDbBanner message={error} onRetry={() => void reload()} /> : null}
@@ -75,12 +97,24 @@ export const DashboardPage = () => {
         eyebrow="Operations"
         title="Dashboard"
         actions={
-          <Link
-            to="/invoices/new"
-            className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-orange-500/20 transition-all duration-200 hover:shadow-lg hover:shadow-orange-500/30 hover:-translate-y-0.5"
-          >
-            New Invoice
-          </Link>
+          <>
+            <button
+              type="button"
+              onClick={sendPnrReminder}
+              disabled={pendingPnrCount === 0}
+              title={pendingPnrCount === 0 ? 'No pending PNR tickets' : `Send a WhatsApp reminder for ${pendingPnrCount} pending PNR ticket(s)`}
+              className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-700 shadow-sm transition-all duration-200 hover:bg-emerald-100 hover:shadow disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <BellRing size={15} />
+              PNR Reminder{pendingPnrCount > 0 ? ` (${pendingPnrCount})` : ''}
+            </button>
+            <Link
+              to="/invoices/new"
+              className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-orange-500/20 transition-all duration-200 hover:shadow-lg hover:shadow-orange-500/30 hover:-translate-y-0.5"
+            >
+              New Invoice
+            </Link>
+          </>
         }
       />
 

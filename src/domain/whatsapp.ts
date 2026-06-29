@@ -50,7 +50,7 @@ export const buildPendingPnrReminderMessage = (invoices: Invoice[]) => {
       `   Fly date: ${formatReminderDate(invoice.flight.departureDate)}`,
       `   Passengers: ${invoice.flight.passengerCount}`,
       `   Total amount: ${formatInr(invoice.pricing.total)}`,
-      `   Advance taken: ${formatInr(invoice.pricing.advancePayment ?? 0)}`,
+      `   Pending amount: ${formatInr(Math.max(0, invoice.pricing.total - (invoice.pricing.advancePayment ?? 0)))}`,
       `   Days since invoice: ${daysSinceInvoice(invoice.createdAt)}`,
     ].join('\n')
   })
@@ -101,6 +101,12 @@ export const buildWhatsAppInvoiceMessage = (invoice: Invoice, settings: AppSetti
     `Total fare: ${formatInr(invoice.pricing.totalFare)}`,
     `Discount: ${invoice.pricing.discountPercentage}%`,
     `Final amount: ${formatInr(invoice.pricing.total)}`,
+    ...(invoice.pricing.advancePayment && invoice.pricing.advancePayment > 0
+      ? [
+          `Advance paid: ${formatInr(invoice.pricing.advancePayment)}`,
+          `Pending balance: ${formatInr(Math.max(0, invoice.pricing.total - invoice.pricing.advancePayment))}`,
+        ]
+      : []),
     '',
     ...terms,
   ].join('\n')
