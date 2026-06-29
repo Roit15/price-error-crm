@@ -72,10 +72,29 @@ describe('buildPendingPnrReminderMessage', () => {
     expect(message).toContain('Phone: 9876543210')
     expect(message).toContain('Mumbai (BOM) to Dubai (DXB)')
     expect(message).toContain('Passengers: 3')
-    expect(message).toContain('Advance taken:')
+    expect(message).toContain('Total amount: ₹24,000')
+    expect(message).toContain('Advance taken: ₹5,000')
+    expect(message).toContain('Balance due: ₹19,000')
     expect(message).toContain('Days since invoice:')
     expect(message).not.toContain('Invoice created')
-    expect(message).toContain('Total pending amount')
+    // Total pending must be net of advances (24,000 - 5,000).
+    expect(message).toContain('Total pending amount (after advance): ₹19,000')
+  })
+
+  it('sums the total pending net of advances across tickets', () => {
+    const message = buildPendingPnrReminderMessage([
+      invoice({
+        status: 'Paid',
+        pricing: { totalFare: 30000, discountPercentage: 0, discountAmount: 0, total: 30000, advancePayment: 10000 },
+      }),
+      invoice({
+        status: 'InProcessPNR',
+        pricing: { totalFare: 20000, discountPercentage: 0, discountAmount: 0, total: 20000, advancePayment: 5000 },
+      }),
+    ])
+
+    // (30,000 - 10,000) + (20,000 - 5,000) = 35,000
+    expect(message).toContain('Total pending amount (after advance): ₹35,000')
   })
 
   it('reports when nothing is pending', () => {

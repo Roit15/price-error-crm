@@ -41,6 +41,9 @@ export const buildPendingPnrReminderMessage = (invoices: Invoice[]) => {
     return 'No pending PNR tickets right now.'
   }
 
+  const balanceDue = (invoice: Invoice) =>
+    Math.max(0, invoice.pricing.total - (invoice.pricing.advancePayment ?? 0))
+
   const lines = pending.map((invoice, index) => {
     const route = [invoice.flight.origin, invoice.flight.destination].filter(Boolean).join(' to ') || 'N/A'
     return [
@@ -51,18 +54,19 @@ export const buildPendingPnrReminderMessage = (invoices: Invoice[]) => {
       `   Passengers: ${invoice.flight.passengerCount}`,
       `   Total amount: ${formatInr(invoice.pricing.total)}`,
       `   Advance taken: ${formatInr(invoice.pricing.advancePayment ?? 0)}`,
+      `   Balance due: ${formatInr(balanceDue(invoice))}`,
       `   Days since invoice: ${daysSinceInvoice(invoice.createdAt)}`,
     ].join('\n')
   })
 
-  const totalPending = pending.reduce((sum, invoice) => sum + invoice.pricing.total, 0)
+  const totalPending = pending.reduce((sum, invoice) => sum + balanceDue(invoice), 0)
 
   return [
     `Pending PNR reminder - ${pending.length} ticket${pending.length === 1 ? '' : 's'}`,
     '',
     lines.join('\n\n'),
     '',
-    `Total pending amount: ${formatInr(totalPending)}`,
+    `Total pending amount (after advance): ${formatInr(totalPending)}`,
   ].join('\n')
 }
 
