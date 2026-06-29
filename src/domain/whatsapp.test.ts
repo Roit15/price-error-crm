@@ -53,6 +53,7 @@ describe('buildPendingPnrReminderMessage', () => {
       invoice({
         status: 'InProcessPNR',
         invoiceNumber: 'PE-20260525-007',
+        customer: { name: 'Rahul Sharma', phone: '9876543210' },
         flight: {
           origin: 'Mumbai (BOM)',
           destination: 'Dubai (DXB)',
@@ -61,13 +62,19 @@ describe('buildPendingPnrReminderMessage', () => {
           travelClass: 'Economy',
           passengerCount: 3,
         },
+        pricing: { totalFare: 24000, discountPercentage: 0, discountAmount: 0, total: 24000, advancePayment: 5000 },
       }),
     ])
 
     expect(message).toContain('Pending PNR reminder - 1 ticket')
-    expect(message).toContain('PE-20260525-007 - Rahul Sharma')
+    expect(message).toContain('1. Rahul Sharma')
+    expect(message).not.toContain('PE-20260525-007')
+    expect(message).toContain('Phone: 9876543210')
     expect(message).toContain('Mumbai (BOM) to Dubai (DXB)')
     expect(message).toContain('Passengers: 3')
+    expect(message).toContain('Advance taken:')
+    expect(message).toContain('Days since invoice:')
+    expect(message).not.toContain('Invoice created')
     expect(message).toContain('Total pending amount')
   })
 

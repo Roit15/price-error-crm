@@ -18,6 +18,14 @@ const formatReminderDate = (value: string) => {
   return new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).format(parsed)
 }
 
+// Whole days elapsed between the invoice creation date and the moment the reminder is sent.
+const daysSinceInvoice = (value: string) => {
+  if (!value) return 'N/A'
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return 'N/A'
+  return Math.max(0, Math.floor((Date.now() - parsed.getTime()) / 86_400_000))
+}
+
 // A flight ticket whose PNR is still pending: payment captured (Paid) or the PNR is being processed.
 // Mirrors the dashboard's "PNR pending" definition.
 export const getPendingPnrInvoices = (invoices: Invoice[]) =>
@@ -36,12 +44,14 @@ export const buildPendingPnrReminderMessage = (invoices: Invoice[]) => {
   const lines = pending.map((invoice, index) => {
     const route = [invoice.flight.origin, invoice.flight.destination].filter(Boolean).join(' to ') || 'N/A'
     return [
-      `${index + 1}. ${invoice.invoiceNumber} - ${invoice.customer.name || 'Unknown'}`,
+      `${index + 1}. ${invoice.customer.name || 'Unknown'}`,
+      `   Phone: ${invoice.customer.phone || 'N/A'}`,
       `   Route: ${route}`,
       `   Fly date: ${formatReminderDate(invoice.flight.departureDate)}`,
       `   Passengers: ${invoice.flight.passengerCount}`,
       `   Total amount: ${formatInr(invoice.pricing.total)}`,
-      `   Invoice created: ${formatReminderDate(invoice.createdAt)}`,
+      `   Advance taken: ${formatInr(invoice.pricing.advancePayment ?? 0)}`,
+      `   Days since invoice: ${daysSinceInvoice(invoice.createdAt)}`,
     ].join('\n')
   })
 
