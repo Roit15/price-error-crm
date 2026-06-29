@@ -8,6 +8,59 @@ const normalizePhoneForWhatsApp = (phone: string) => {
   return digits
 }
 
+// Business owner's WhatsApp number that receives the pending-PNR reminders.
+export const REMINDER_WHATSAPP_NUMBER = '918569977977'
+
+const formatReminderDate = (value: string) => {
+  if (!value) return 'N/A'
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return value
+  return new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).format(parsed)
+}
+
+// A flight ticket whose PNR is still pending: payment captured (Paid) or the PNR is being processed.
+// Mirrors the dashboard's "PNR pending" definition.
+export const getPendingPnrInvoices = (invoices: Invoice[]) =>
+  invoices.filter(
+    (invoice) =>
+      invoice.invoiceType === 'FlightTicket' && (invoice.status === 'Paid' || invoice.status === 'InProcessPNR'),
+  )
+
+export const buildPendingPnrReminderMessage = (invoices: Invoice[]) => {
+  const pending = getPendingPnrInvoices(invoices)
+
+  if (pending.length === 0) {
+    return 'No pending PNR tickets right now.'
+  }
+
+  const lines = pending.map((invoice, index) => {
+    const route = [invoice.flight.origin, invoice.flight.destination].filter(Boolean).join(' to ') || 'N/A'
+    return [
+      `${index + 1}. ${invoice.invoiceNumber} - ${invoice.customer.name || 'Unknown'}`,
+      `   Route: ${route}`,
+      `   Fly date: ${formatReminderDate(invoice.flight.departureDate)}`,
+      `   Passengers: ${invoice.flight.passengerCount}`,
+      `   Total amount: ${formatInr(invoice.pricing.total)}`,
+      `   Invoice created: ${formatReminderDate(invoice.createdAt)}`,
+    ].join('\n')
+  })
+
+  const totalPending = pending.reduce((sum, invoice) => sum + invoice.pricing.total, 0)
+
+  return [
+    `Pending PNR reminder - ${pending.length} ticket${pending.length === 1 ? '' : 's'}`,
+    '',
+    lines.join('\n\n'),
+    '',
+    `Total pending amount: ${formatInr(totalPending)}`,
+  ].join('\n')
+}
+
+export const buildPendingPnrReminderUrl = (invoices: Invoice[]) => {
+  const message = encodeURIComponent(buildPendingPnrReminderMessage(invoices))
+  return `https://wa.me/${REMINDER_WHATSAPP_NUMBER}?text=${message}`
+}
+
 export const buildWhatsAppInvoiceMessage = (invoice: Invoice, settings: AppSettings) => {
   const terms = getInvoiceTerms(invoice)
 
