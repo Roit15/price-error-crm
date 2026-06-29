@@ -9,7 +9,7 @@ const normalizePhoneForWhatsApp = (phone: string) => {
 }
 
 // Business owner's WhatsApp number that receives the pending-PNR reminders.
-export const REMINDER_WHATSAPP_NUMBER = '918569977977'
+export const REMINDER_WHATSAPP_NUMBER = '917428116576'
 
 const formatReminderDate = (value: string) => {
   if (!value) return 'N/A'
@@ -49,7 +49,6 @@ export const buildPendingPnrReminderMessage = (invoices: Invoice[]) => {
       `   Route: ${route}`,
       `   Fly date: ${formatReminderDate(invoice.flight.departureDate)}`,
       `   Passengers: ${invoice.flight.passengerCount}`,
-      `   Total amount: ${formatInr(invoice.pricing.total)}`,
       `   Pending amount: ${formatInr(Math.max(0, invoice.pricing.total - (invoice.pricing.advancePayment ?? 0)))}`,
       `   Days since invoice: ${daysSinceInvoice(invoice.createdAt)}`,
     ].join('\n')
