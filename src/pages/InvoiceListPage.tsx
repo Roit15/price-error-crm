@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
-import { Search, SlidersHorizontal, FileText } from 'lucide-react'
+import { Search, SlidersHorizontal, FileText, BellRing } from 'lucide-react'
 import { InvoiceTable } from '../components/InvoiceTable'
 import { PageHeader } from '../components/PageHeader'
 import { invoiceStatuses, invoiceStatusLabels, invoiceTypeLabels, invoiceTypes, type Invoice, type InvoiceStatus, type InvoiceType } from '../domain/invoice'
+import { buildPendingPnrReminderUrl, getPendingPnrInvoices } from '../domain/whatsapp'
 import { invoiceRepository } from '../persistence/invoiceRepository'
 import { useInvoices } from '../services/useInvoices'
 
@@ -52,6 +53,16 @@ export const InvoiceListPage = () => {
     await reload()
   }
 
+  const pendingPnrCount = useMemo(() => getPendingPnrInvoices(invoices).length, [invoices])
+
+  const sendPnrReminder = () => {
+    if (pendingPnrCount === 0) {
+      window.alert('No pending PNR tickets to remind about.')
+      return
+    }
+    window.open(buildPendingPnrReminderUrl(invoices), '_blank', 'noopener,noreferrer')
+  }
+
   const hasActiveFilters = status !== 'All' || typeFilter !== 'All' || dateFrom || dateTo || query
 
   return (
@@ -61,6 +72,16 @@ export const InvoiceListPage = () => {
         title="Invoices"
         actions={
           <>
+            <button
+              type="button"
+              onClick={sendPnrReminder}
+              disabled={pendingPnrCount === 0}
+              title={pendingPnrCount === 0 ? 'No pending PNR tickets' : `Send a WhatsApp reminder for ${pendingPnrCount} pending PNR ticket(s)`}
+              className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-700 shadow-sm transition-all duration-200 hover:bg-emerald-100 hover:shadow disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <BellRing size={15} />
+              PNR Reminder{pendingPnrCount > 0 ? ` (${pendingPnrCount})` : ''}
+            </button>
             <button
               type="button"
               onClick={() => void reload()}
