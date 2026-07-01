@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import type { Invoice } from './invoice'
-import { buildDashboardStats } from './dashboard'
+import {
+  buildDashboardStats,
+  filterInvoicesByMonth,
+  formatMonthLabel,
+  getInvoiceMonthKey,
+  listInvoiceMonths,
+  monthRange,
+  previousMonthKey,
+} from './dashboard'
 
 const invoice = (status: Invoice['status'], total: number, invoiceType: Invoice['invoiceType'] = 'FlightTicket'): Invoice => ({
   id: crypto.randomUUID(),
@@ -53,5 +61,39 @@ describe('buildDashboardStats', () => {
     expect(stats.pnrPendingCount).toBe(2)
     expect(stats.paymentBreakdown.flightBookings).toEqual({ salesCount: 1, revenue: 500 })
     expect(stats.paymentBreakdown.digitalServices).toEqual({ salesCount: 1, revenue: 900 })
+  })
+})
+
+describe('monthly helpers', () => {
+  const withDate = (invoiceDate: string) => ({ ...invoice('Completed', 100), invoiceDate })
+
+  it('derives the month key from the invoice date', () => {
+    expect(getInvoiceMonthKey(withDate('2026-05-25'))).toBe('2026-05')
+  })
+
+  it('lists distinct months newest first', () => {
+    const months = listInvoiceMonths([withDate('2026-05-01'), withDate('2026-07-15'), withDate('2026-05-20')])
+    expect(months).toEqual(['2026-07', '2026-05'])
+  })
+
+  it('filters invoices to a single month, and returns all for the sentinel', () => {
+    const invoices = [withDate('2026-05-01'), withDate('2026-06-01')]
+    expect(filterInvoicesByMonth(invoices, '2026-05')).toHaveLength(1)
+    expect(filterInvoicesByMonth(invoices, 'all')).toHaveLength(2)
+  })
+
+  it('computes an inclusive month range covering leap-year February', () => {
+    expect(monthRange('2026-02')).toEqual({ from: '2026-02-01', to: '2026-02-28' })
+    expect(monthRange('2024-02')).toEqual({ from: '2024-02-01', to: '2024-02-29' })
+  })
+
+  it('computes the previous month across a year boundary', () => {
+    expect(previousMonthKey('2026-01')).toBe('2025-12')
+    expect(previousMonthKey('2026-07')).toBe('2026-06')
+  })
+
+  it('formats a friendly month label', () => {
+    expect(formatMonthLabel('all')).toBe('All time')
+    expect(formatMonthLabel('2026-07')).toBe('July 2026')
   })
 })

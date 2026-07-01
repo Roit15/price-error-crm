@@ -24,6 +24,46 @@ export type PaymentCategoryStats = {
 
 const getMonthKey = (isoDate: string) => isoDate.slice(0, 7)
 
+export const ALL_MONTHS = 'all'
+
+// The month an invoice belongs to, preferring the business invoice date over the technical createdAt.
+export const getInvoiceMonthKey = (invoice: Invoice) => (invoice.invoiceDate || invoice.createdAt).slice(0, 7)
+
+// Distinct months (YYYY-MM) present in the data, newest first.
+export const listInvoiceMonths = (invoices: Invoice[]): string[] =>
+  Array.from(new Set(invoices.map(getInvoiceMonthKey)))
+    .filter((month) => month.length === 7)
+    .sort((a, b) => b.localeCompare(a))
+
+export const filterInvoicesByMonth = (invoices: Invoice[], monthKey: string): Invoice[] =>
+  monthKey === ALL_MONTHS ? invoices : invoices.filter((invoice) => getInvoiceMonthKey(invoice) === monthKey)
+
+// Inclusive [from, to] date range covering a whole month, formatted as YYYY-MM-DD.
+export const monthRange = (monthKey: string) => {
+  const [year, month] = monthKey.split('-').map(Number)
+  const lastDay = new Date(year, month, 0).getDate()
+  return { from: `${monthKey}-01`, to: `${monthKey}-${String(lastDay).padStart(2, '0')}` }
+}
+
+export const formatMonthLabel = (monthKey: string) => {
+  if (monthKey === ALL_MONTHS) return 'All time'
+  const [year, month] = monthKey.split('-').map(Number)
+  return new Intl.DateTimeFormat('en-IN', { month: 'long', year: 'numeric' }).format(new Date(year, month - 1, 1))
+}
+
+// Previous month key (YYYY-MM) for month-over-month comparisons.
+export const previousMonthKey = (monthKey: string) => {
+  const [year, month] = monthKey.split('-').map(Number)
+  const date = new Date(year, month - 2, 1)
+  return getMonthKey(date.toISOString())
+}
+
+// Revenue from invoices marked Completed within a given month (by completion/update date).
+export const completedRevenueInMonth = (invoices: Invoice[], monthKey: string) =>
+  invoices
+    .filter((invoice) => invoice.status === 'Completed' && getMonthKey(invoice.updatedAt) === monthKey)
+    .reduce((total, invoice) => total + invoice.pricing.total, 0)
+
 export const buildDashboardStats = (invoices: Invoice[]): DashboardStats => {
   const sortedInvoices = [...invoices].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
   const completedInvoices = invoices.filter((invoice) => invoice.status === 'Completed')

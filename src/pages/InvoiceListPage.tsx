@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router'
-import { Search, SlidersHorizontal, FileText, BellRing } from 'lucide-react'
+import { Link, useSearchParams } from 'react-router'
+import { Search, SlidersHorizontal, FileText, BellRing, X } from 'lucide-react'
 import { CentralDbBanner } from '../components/CentralDbBanner'
 import { InvoiceTable } from '../components/InvoiceTable'
 import { PageHeader } from '../components/PageHeader'
@@ -11,21 +11,44 @@ import { useInvoices } from '../services/useInvoices'
 
 type StatusFilter = 'All' | InvoiceStatus
 type TypeFilter = 'All' | InvoiceType
+type PresetFilter = 'pending' | 'pnr' | null
 type SortOption = 'Newest' | 'Oldest' | 'PaymentHighToLow' | 'PaymentLowToHigh'
+
+const presetLabels: Record<'pending' | 'pnr', string> = {
+  pending: 'Pending payments',
+  pnr: 'PNR pending',
+}
 
 export const InvoiceListPage = () => {
   const { invoices, isLoading, error, reload } = useInvoices()
+  const [searchParams] = useSearchParams()
+
   const [query, setQuery] = useState('')
-  const [status, setStatus] = useState<StatusFilter>('All')
-  const [typeFilter, setTypeFilter] = useState<TypeFilter>('All')
+  const [status, setStatus] = useState<StatusFilter>(() => {
+    const value = searchParams.get('status')
+    return value && (invoiceStatuses as readonly string[]).includes(value) ? (value as InvoiceStatus) : 'All'
+  })
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>(() => {
+    const value = searchParams.get('type')
+    return value && (invoiceTypes as readonly string[]).includes(value) ? (value as InvoiceType) : 'All'
+  })
   const [sort, setSort] = useState<SortOption>('Newest')
-  const [dateFrom, setDateFrom] = useState('')
-  const [dateTo, setDateTo] = useState('')
+  const [dateFrom, setDateFrom] = useState(() => searchParams.get('from') ?? '')
+  const [dateTo, setDateTo] = useState(() => searchParams.get('to') ?? '')
+  const [preset, setPreset] = useState<PresetFilter>(() => {
+    const value = searchParams.get('preset')
+    return value === 'pending' || value === 'pnr' ? value : null
+  })
 
   const filteredInvoices = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase()
     const matchingInvoices = invoices.filter((invoice) => {
-      const matchesStatus = status === 'All' || invoice.status === status
+      const matchesStatus =
+        preset === 'pending'
+          ? invoice.status !== 'Completed'
+          : preset === 'pnr'
+            ? invoice.status === 'Paid' || invoice.status === 'InProcessPNR'
+            : status === 'All' || invoice.status === status
       const matchesType = typeFilter === 'All' || invoice.invoiceType === typeFilter
       const matchesQuery =
         normalizedQuery.length === 0 ||
@@ -45,7 +68,7 @@ export const InvoiceListPage = () => {
       if (sort === 'Oldest') return a.createdAt.localeCompare(b.createdAt)
       return b.createdAt.localeCompare(a.createdAt)
     })
-  }, [invoices, query, status, typeFilter, sort, dateFrom, dateTo])
+  }, [invoices, query, status, typeFilter, sort, dateFrom, dateTo, preset])
 
   const deleteInvoice = async (invoice: Invoice) => {
     const confirmed = window.confirm(`Delete ${invoice.invoiceNumber}?`)
@@ -64,7 +87,16 @@ export const InvoiceListPage = () => {
     window.open(buildPendingPnrReminderUrl(invoices), '_blank', 'noopener,noreferrer')
   }
 
-  const hasActiveFilters = status !== 'All' || typeFilter !== 'All' || dateFrom || dateTo || query
+  const hasActiveFilters = status !== 'All' || typeFilter !== 'All' || dateFrom || dateTo || query || preset !== null
+
+  const clearAllFilters = () => {
+    setQuery('')
+    setStatus('All')
+    setTypeFilter('All')
+    setDateFrom('')
+    setDateTo('')
+    setPreset(null)
+  }
 
   return (
     <>
@@ -112,13 +144,7 @@ export const InvoiceListPage = () => {
           {hasActiveFilters && (
             <button
               type="button"
-              onClick={() => {
-                setQuery('')
-                setStatus('All')
-                setTypeFilter('All')
-                setDateFrom('')
-                setDateTo('')
-              }}
+              onClick={clearAllFilters}
               className="text-xs font-bold text-orange-600 transition-colors hover:text-orange-700"
             >
               Clear all
@@ -142,7 +168,10 @@ export const InvoiceListPage = () => {
             <span className="mb-1 block text-xs font-bold text-slate-500">Status</span>
             <select
               value={status}
-              onChange={(event) => setStatus(event.target.value as StatusFilter)}
+              onChange={(event) => {
+                setPreset(null)
+                setStatus(event.target.value as StatusFilter)
+              }}
               className="min-h-11 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition-all duration-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/15"
             >
               <option value="All">All statuses</option>
@@ -203,12 +232,22 @@ export const InvoiceListPage = () => {
       </section>
 
       {/* ─── Results Count ─── */}
-      <div className="mb-3 flex items-center gap-2 animate-fade-in">
+      <div className="mb-3 flex flex-wrap items-center gap-2 animate-fade-in">
         <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
           <FileText size={12} />
           {filteredInvoices.length} invoice{filteredInvoices.length !== 1 ? 's' : ''}
           {hasActiveFilters ? ' (filtered)' : ''}
         </span>
+        {preset && (
+          <button
+            type="button"
+            onClick={() => setPreset(null)}
+            className="inline-flex items-center gap-1.5 rounded-full bg-orange-50 px-3 py-1 text-xs font-bold text-orange-700 ring-1 ring-orange-200 transition-colors hover:bg-orange-100"
+          >
+            {presetLabels[preset]}
+            <X size={12} />
+          </button>
+        )}
       </div>
 
       {/* ─── Table ─── */}
@@ -225,13 +264,7 @@ export const InvoiceListPage = () => {
           <p className="mt-1 text-xs text-slate-400">Try adjusting your search or filter criteria</p>
           <button
             type="button"
-            onClick={() => {
-              setQuery('')
-              setStatus('All')
-              setTypeFilter('All')
-              setDateFrom('')
-              setDateTo('')
-            }}
+            onClick={clearAllFilters}
             className="mt-4 text-sm font-bold text-orange-600 hover:text-orange-700"
           >
             Clear all filters
