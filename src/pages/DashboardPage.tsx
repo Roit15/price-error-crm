@@ -1,10 +1,19 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
-import { TrendingUp, TrendingDown, Minus, FileText, IndianRupee, Clock, Plane, X, BellRing } from 'lucide-react'
+import { TrendingUp, TrendingDown, Minus, FileText, IndianRupee, Clock, Plane, X, BellRing, CalendarRange } from 'lucide-react'
 import { CentralDbBanner } from '../components/CentralDbBanner'
 import { InvoiceTable } from '../components/InvoiceTable'
 import { PageHeader } from '../components/PageHeader'
-import { buildDashboardStats } from '../domain/dashboard'
+import {
+  ALL_MONTHS,
+  buildDashboardStats,
+  completedRevenueInMonth,
+  filterInvoicesByMonth,
+  formatMonthLabel,
+  listInvoiceMonths,
+  monthRange,
+  previousMonthKey,
+} from '../domain/dashboard'
 import { invoiceStatusLabels, type InvoiceStatus } from '../domain/invoice'
 import { formatInr } from '../domain/pricing'
 import { buildPendingPnrReminderUrl, getPendingPnrInvoices } from '../domain/whatsapp'
@@ -12,8 +21,12 @@ import { useInvoices } from '../services/useInvoices'
 
 export const DashboardPage = () => {
   const { invoices, isLoading, error, reload } = useInvoices()
-  const stats = buildDashboardStats(invoices)
+  const [selectedMonth, setSelectedMonth] = useState<string>(ALL_MONTHS)
   const [isPendingModalOpen, setIsPendingModalOpen] = useState(false)
+
+  const months = useMemo(() => listInvoiceMonths(invoices), [invoices])
+  const scopedInvoices = useMemo(() => filterInvoicesByMonth(invoices, selectedMonth), [invoices, selectedMonth])
+  const stats = buildDashboardStats(scopedInvoices)
 
   const pendingPnrCount = getPendingPnrInvoices(invoices).length
   const sendPnrReminder = () => {
@@ -24,12 +37,68 @@ export const DashboardPage = () => {
     window.open(buildPendingPnrReminderUrl(invoices), '_blank', 'noopener,noreferrer')
   }
 
+  // Build a link into the Invoices list carrying the active filters plus the selected month's date range.
+  const buildInvoicesLink = (params: Record<string, string>) => {
+    const search = new URLSearchParams(params)
+    if (selectedMonth !== ALL_MONTHS) {
+      const range = monthRange(selectedMonth)
+      search.set('from', range.from)
+      search.set('to', range.to)
+    }
+    const query = search.toString()
+    return query ? `/invoices?${query}` : '/invoices'
+  }
+
+  const trendMonth = selectedMonth === ALL_MONTHS ? new Date().toISOString().slice(0, 7) : selectedMonth
+  const trendCurrent = completedRevenueInMonth(invoices, trendMonth)
+  const trendPrevious = completedRevenueInMonth(invoices, previousMonthKey(trendMonth))
   const trendPct =
-    stats.lastMonthRevenue > 0
-      ? Math.round(((stats.thisMonthRevenue - stats.lastMonthRevenue) / stats.lastMonthRevenue) * 100)
-      : stats.thisMonthRevenue > 0
+    trendPrevious > 0
+      ? Math.round(((trendCurrent - trendPrevious) / trendPrevious) * 100)
+      : trendCurrent > 0
         ? 100
         : 0
+
+  const monthSelector = (
+    <label className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700 shadow-sm">
+      <CalendarRange size={15} className="text-slate-400" />
+      <span className="sr-only">Month</span>
+      <select
+        value={selectedMonth}
+        onChange={(event) => setSelectedMonth(event.target.value)}
+        className="min-h-6 bg-transparent pr-1 text-sm font-bold text-slate-700 outline-none"
+      >
+        <option value={ALL_MONTHS}>All time</option>
+        {months.map((month) => (
+          <option key={month} value={month}>
+            {formatMonthLabel(month)}
+          </option>
+        ))}
+      </select>
+    </label>
+  )
+
+  const reminderButton = (
+    <button
+      type="button"
+      onClick={sendPnrReminder}
+      disabled={pendingPnrCount === 0}
+      title={pendingPnrCount === 0 ? 'No pending PNR tickets' : `Send a WhatsApp reminder for ${pendingPnrCount} pending PNR ticket(s)`}
+      className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-700 shadow-sm transition-all duration-200 hover:bg-emerald-100 hover:shadow disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      <BellRing size={15} />
+      PNR Reminder{pendingPnrCount > 0 ? ` (${pendingPnrCount})` : ''}
+    </button>
+  )
+
+  const newInvoiceButton = (
+    <Link
+      to="/invoices/new"
+      className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-orange-500/20 transition-all duration-200 hover:shadow-lg hover:shadow-orange-500/30 hover:-translate-y-0.5"
+    >
+      New Invoice
+    </Link>
+  )
 
   if (isLoading) {
     return (
@@ -52,22 +121,8 @@ export const DashboardPage = () => {
           title="Dashboard"
           actions={
             <>
-              <button
-                type="button"
-                onClick={sendPnrReminder}
-                disabled={pendingPnrCount === 0}
-                title={pendingPnrCount === 0 ? 'No pending PNR tickets' : `Send a WhatsApp reminder for ${pendingPnrCount} pending PNR ticket(s)`}
-                className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-700 shadow-sm transition-all duration-200 hover:bg-emerald-100 hover:shadow disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <BellRing size={15} />
-                PNR Reminder{pendingPnrCount > 0 ? ` (${pendingPnrCount})` : ''}
-              </button>
-              <Link
-                to="/invoices/new"
-                className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-orange-500/20 transition-all duration-200 hover:shadow-lg hover:shadow-orange-500/30 hover:-translate-y-0.5"
-              >
-                New Invoice
-              </Link>
+              {reminderButton}
+              {newInvoiceButton}
             </>
           }
         />
@@ -98,22 +153,9 @@ export const DashboardPage = () => {
         title="Dashboard"
         actions={
           <>
-            <button
-              type="button"
-              onClick={sendPnrReminder}
-              disabled={pendingPnrCount === 0}
-              title={pendingPnrCount === 0 ? 'No pending PNR tickets' : `Send a WhatsApp reminder for ${pendingPnrCount} pending PNR ticket(s)`}
-              className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-700 shadow-sm transition-all duration-200 hover:bg-emerald-100 hover:shadow disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <BellRing size={15} />
-              PNR Reminder{pendingPnrCount > 0 ? ` (${pendingPnrCount})` : ''}
-            </button>
-            <Link
-              to="/invoices/new"
-              className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-orange-500/20 transition-all duration-200 hover:shadow-lg hover:shadow-orange-500/30 hover:-translate-y-0.5"
-            >
-              New Invoice
-            </Link>
+            {monthSelector}
+            {reminderButton}
+            {newInvoiceButton}
           </>
         }
       />
@@ -128,6 +170,7 @@ export const DashboardPage = () => {
           value={stats.totalInvoices.toString()}
           gradient="from-slate-900 to-slate-800"
           iconBg="bg-slate-700"
+          to={buildInvoicesLink({})}
         />
         <StatCard
           icon={<IndianRupee size={18} />}
@@ -136,6 +179,7 @@ export const DashboardPage = () => {
           gradient="from-emerald-600 to-emerald-800"
           iconBg="bg-emerald-500"
           trend={trendPct}
+          to={buildInvoicesLink({ status: 'Completed' })}
         />
         <StatCard
           icon={<Clock size={18} />}
@@ -151,6 +195,7 @@ export const DashboardPage = () => {
           value={stats.pnrPendingCount.toString()}
           gradient="from-indigo-600 to-slate-900"
           iconBg="bg-indigo-500"
+          to={buildInvoicesLink({ preset: 'pnr' })}
         />
       </section>
 
@@ -170,6 +215,7 @@ export const DashboardPage = () => {
           salesCount={stats.paymentBreakdown.digitalServices.salesCount}
           revenue={stats.paymentBreakdown.digitalServices.revenue}
           accent="orange"
+          to={buildInvoicesLink({ type: 'DigitalService', status: 'Completed' })}
         />
         <PaymentCategory
           eyebrow="Flight Bookings"
@@ -177,6 +223,7 @@ export const DashboardPage = () => {
           salesCount={stats.paymentBreakdown.flightBookings.salesCount}
           revenue={stats.paymentBreakdown.flightBookings.revenue}
           accent="emerald"
+          to={buildInvoicesLink({ type: 'FlightTicket', status: 'Completed' })}
         />
       </section>
 
@@ -235,6 +282,7 @@ const StatCard = ({
   gradient,
   iconBg,
   trend,
+  to,
   onClick,
 }: {
   icon: React.ReactNode
@@ -243,34 +291,52 @@ const StatCard = ({
   gradient: string
   iconBg: string
   trend?: number
+  to?: string
   onClick?: () => void
 }) => {
-  const Component = onClick ? 'button' : 'article'
-  return (
-    <Component
-      onClick={onClick}
-      className={`hover-lift block w-full text-left rounded-xl bg-gradient-to-br ${gradient} p-5 text-white shadow-lg ${onClick ? 'cursor-pointer hover:shadow-xl' : ''}`}
-    >
-    <div className="flex items-start justify-between">
-      <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${iconBg} shadow-sm`}>
-        {icon}
+  const content = (
+    <>
+      <div className="flex items-start justify-between">
+        <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${iconBg} shadow-sm`}>
+          {icon}
+        </div>
+        {trend !== undefined && trend !== 0 && (
+          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold ${trend > 0 ? 'bg-emerald-400/20 text-emerald-200' : 'bg-red-400/20 text-red-200'}`}>
+            {trend > 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+            {Math.abs(trend)}%
+          </span>
+        )}
+        {trend === 0 && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-bold text-white/60">
+            <Minus size={12} />
+          </span>
+        )}
       </div>
-      {trend !== undefined && trend !== 0 && (
-        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold ${trend > 0 ? 'bg-emerald-400/20 text-emerald-200' : 'bg-red-400/20 text-red-200'}`}>
-          {trend > 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-          {Math.abs(trend)}%
-        </span>
-      )}
-      {trend === 0 && (
-        <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-bold text-white/60">
-          <Minus size={12} />
-        </span>
-      )}
-    </div>
-    <p className="mt-3 text-sm font-bold text-white/70">{label}</p>
-    <p className="mt-1 text-2xl font-black">{value}</p>
-  </Component>
-)
+      <p className="mt-3 text-sm font-bold text-white/70">{label}</p>
+      <p className="mt-1 text-2xl font-black">{value}</p>
+    </>
+  )
+
+  const baseClassName = `hover-lift block w-full text-left rounded-xl bg-gradient-to-br ${gradient} p-5 text-white shadow-lg`
+  const interactiveClassName = 'cursor-pointer transition-transform hover:shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60'
+
+  if (to) {
+    return (
+      <Link to={to} className={`${baseClassName} ${interactiveClassName}`}>
+        {content}
+      </Link>
+    )
+  }
+
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} className={`${baseClassName} ${interactiveClassName}`}>
+        {content}
+      </button>
+    )
+  }
+
+  return <article className={baseClassName}>{content}</article>
 }
 
 /* ─── Status Breakdown Bar ─── */
@@ -338,30 +404,44 @@ const PaymentCategory = ({
   salesCount,
   revenue,
   accent,
+  to,
 }: {
   eyebrow: string
   title: string
   salesCount: number
   revenue: number
   accent: keyof typeof categoryAccents
-}) => (
-  <article className="glass-card hover-lift rounded-xl p-5">
-    <div className="flex items-start justify-between gap-3">
-      <div>
-        <p className={`inline-flex rounded-full px-2.5 py-1 text-xs font-black ring-1 ${categoryAccents[accent].badge}`}>{eyebrow}</p>
-        <h3 className="mt-3 text-lg font-black tracking-tight text-slate-950">{title}</h3>
+  to?: string
+}) => {
+  const content = (
+    <>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className={`inline-flex rounded-full px-2.5 py-1 text-xs font-black ring-1 ${categoryAccents[accent].badge}`}>{eyebrow}</p>
+          <h3 className="mt-3 text-lg font-black tracking-tight text-slate-950">{title}</h3>
+        </div>
+        <p className="text-right text-2xl font-black text-slate-950">{formatInr(revenue)}</p>
       </div>
-      <p className="text-right text-2xl font-black text-slate-950">{formatInr(revenue)}</p>
-    </div>
-    <div className="mt-4 grid grid-cols-2 gap-3">
-      <div className={`rounded-lg bg-gradient-to-br ${categoryAccents[accent].gradient} p-3`}>
-        <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Sales</p>
-        <p className="mt-1 text-xl font-black text-slate-950">{salesCount}</p>
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        <div className={`rounded-lg bg-gradient-to-br ${categoryAccents[accent].gradient} p-3`}>
+          <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Sales</p>
+          <p className="mt-1 text-xl font-black text-slate-950">{salesCount}</p>
+        </div>
+        <div className={`rounded-lg bg-gradient-to-br ${categoryAccents[accent].gradient} p-3`}>
+          <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Revenue</p>
+          <p className="mt-1 text-xl font-black text-slate-950">{formatInr(revenue)}</p>
+        </div>
       </div>
-      <div className={`rounded-lg bg-gradient-to-br ${categoryAccents[accent].gradient} p-3`}>
-        <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Revenue</p>
-        <p className="mt-1 text-xl font-black text-slate-950">{formatInr(revenue)}</p>
-      </div>
-    </div>
-  </article>
-)
+    </>
+  )
+
+  const className = 'glass-card hover-lift block rounded-xl p-5'
+
+  return to ? (
+    <Link to={to} className={`${className} transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/40`}>
+      {content}
+    </Link>
+  ) : (
+    <article className={className}>{content}</article>
+  )
+}
