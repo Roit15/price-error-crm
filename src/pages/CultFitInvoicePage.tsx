@@ -4,13 +4,14 @@ import { useForm, type Resolver } from 'react-hook-form'
 import { useNavigate } from 'react-router'
 import { z } from 'zod'
 import { PageHeader } from '../components/PageHeader'
-import { Panel, TextField } from '../components/ui/FormControls'
+import { Panel, SelectField, TextField } from '../components/ui/FormControls'
 import { createEmptyInvoice, saveInvoiceDraft } from '../services/invoiceService'
 
 const cultFitFormSchema = z.object({
   customerName: z.string().trim().min(1, 'Customer name is required'),
   customerPhone: z.string().trim().min(1, 'Phone number is required'),
   total: z.coerce.number().min(0, 'Total must be positive'),
+  status: z.enum(['VoucherGeneratedPaymentPending', 'PaymentDone']),
 })
 
 type CultFitFormValues = z.infer<typeof cultFitFormSchema>
@@ -24,6 +25,7 @@ export const CultFitInvoicePage = () => {
     mode: 'onBlur',
     defaultValues: {
       total: 0,
+      status: 'VoucherGeneratedPaymentPending',
     }
   })
 
@@ -34,7 +36,7 @@ export const CultFitInvoicePage = () => {
       
       const savedInvoice = await saveInvoiceDraft(emptyInvoice, {
         invoiceType: 'DigitalService',
-        status: 'Sent',
+        status: values.status,
         customer: {
           name: values.customerName,
           phone: values.customerPhone,
@@ -101,6 +103,13 @@ export const CultFitInvoicePage = () => {
                 error={form.formState.errors.total?.message} 
                 {...form.register('total', { valueAsNumber: true })} 
               />
+              <SelectField
+                label="Payment Status"
+                {...form.register('status')}
+              >
+                <option value="VoucherGeneratedPaymentPending">Voucher Generated and Payment Pending</option>
+                <option value="PaymentDone">Payment Done</option>
+              </SelectField>
              </div>
           </Panel>
         </div>

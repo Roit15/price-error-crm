@@ -12,8 +12,20 @@ export const digitalServiceHighlights = [
   'Delivery after confirmation',
 ]
 
-export const getInvoiceHighlights = (invoice: Pick<Invoice, 'invoiceType'>) =>
-  invoice.invoiceType === 'DigitalService' ? digitalServiceHighlights : flightBusinessHighlights
+export const cultFitHighlights = [
+  'GYM and Group Classess acccess',
+  '1 city any Cult elite and pro gym access',
+]
+
+export const getInvoiceHighlights = (invoice: Pick<Invoice, 'invoiceType' | 'digitalService'>) => {
+  if (invoice.invoiceType === 'DigitalService') {
+    if (invoice.digitalService?.itemName?.toLowerCase().includes('cult')) {
+      return cultFitHighlights
+    }
+    return digitalServiceHighlights
+  }
+  return flightBusinessHighlights
+}
 
 export const flightInvoiceTerms = [
   'PNR Details: You will receive your PNR within 7 days.',
