@@ -15,6 +15,7 @@ export type DashboardStats = {
   lastMonthRevenue: number
   recentInvoices: Invoice[]
   pendingInvoices: Invoice[]
+  cultPendingPayments: Invoice[]
 }
 
 export type PaymentCategoryStats = {
@@ -86,6 +87,8 @@ export const buildDashboardStats = (invoices: Invoice[]): DashboardStats => {
     InProcessPNR: 0,
     PNRIssued: 0,
     Completed: 0,
+    VoucherGeneratedPaymentPending: 0,
+    PaymentDone: 0,
   } satisfies Record<InvoiceStatus, number>
 
   for (const invoice of invoices) {
@@ -113,6 +116,7 @@ export const buildDashboardStats = (invoices: Invoice[]): DashboardStats => {
     lastMonthRevenue: lastMonthCompleted.reduce((total, i) => total + i.pricing.total, 0),
     recentInvoices: sortedInvoices.slice(0, 5),
     pendingInvoices: pendingPaymentInvoices,
+    cultPendingPayments: sortedInvoices.filter((i) => i.status === 'VoucherGeneratedPaymentPending'),
   }
 }
 

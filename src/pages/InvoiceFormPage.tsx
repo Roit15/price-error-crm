@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useForm, useWatch, type Resolver } from 'react-hook-form'
-import { useNavigate, useParams } from 'react-router'
+import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { z } from 'zod'
 import { Check, Loader2 } from 'lucide-react'
 import { PageHeader } from '../components/PageHeader'
@@ -63,6 +63,8 @@ type InvoiceFormValues = z.infer<typeof invoiceFormSchema>
 
 export const InvoiceFormPage = () => {
   const { invoiceId } = useParams()
+  const [searchParams] = useSearchParams()
+  const template = searchParams.get('template')
   const navigate = useNavigate()
   const [invoice, setInvoice] = useState<Invoice | null>(null)
   const invoiceRef = useRef<Invoice | null>(null)
@@ -106,6 +108,10 @@ export const InvoiceFormPage = () => {
       }
 
       if (!invoiceId) {
+        if (template === 'cultfit') {
+          loadedInvoice.invoiceType = 'DigitalService'
+          loadedInvoice.digitalService = { itemName: 'Cult Fit Elite 12M' }
+        }
         await invoiceRepository.save(loadedInvoice)
       }
 

@@ -23,6 +23,7 @@ export const DashboardPage = () => {
   const { invoices, isLoading, error, reload } = useInvoices()
   const [selectedMonth, setSelectedMonth] = useState<string>(ALL_MONTHS)
   const [isPendingModalOpen, setIsPendingModalOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState<'recent' | 'cultPending'>('recent')
 
   const months = useMemo(() => listInvoiceMonths(invoices), [invoices])
   const scopedInvoices = useMemo(() => filterInvoicesByMonth(invoices, selectedMonth), [invoices, selectedMonth])
@@ -152,11 +153,17 @@ export const DashboardPage = () => {
         eyebrow="Operations"
         title="Dashboard"
         actions={
-          <>
+          <div className="flex gap-2">
             {monthSelector}
             {reminderButton}
+            <Link
+              to="/cult-fit/new"
+              className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-gradient-to-r from-purple-500 to-purple-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-purple-500/20 transition-all duration-200 hover:shadow-lg hover:shadow-purple-500/30 hover:-translate-y-0.5"
+            >
+              New Cult Fit Invoice
+            </Link>
             {newInvoiceButton}
-          </>
+          </div>
         }
       />
 
@@ -227,15 +234,42 @@ export const DashboardPage = () => {
         />
       </section>
 
-      {/* ─── Recent Invoices ─── */}
+      {/* ─── Invoices Tabs ─── */}
       <section className="mt-8 animate-slide-up glass-card rounded-xl p-5" style={{ animationDelay: '300ms' }}>
-        <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-lg font-black tracking-tight text-slate-950">Recent invoices</h3>
+        <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-3">
+          <div className="flex gap-6">
+            <button
+              onClick={() => setActiveTab('recent')}
+              className={`text-lg font-black tracking-tight transition-colors duration-200 ${
+                activeTab === 'recent' ? 'text-slate-950' : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              Recent invoices
+            </button>
+            <button
+              onClick={() => setActiveTab('cultPending')}
+              className={`text-lg font-black tracking-tight transition-colors duration-200 flex items-center gap-2 ${
+                activeTab === 'cultPending' ? 'text-slate-950' : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              Cult pending payment
+              {stats.cultPendingPayments.length > 0 && (
+                <span className="flex h-5 items-center justify-center rounded-full bg-orange-100 px-2 text-xs text-orange-700">
+                  {stats.cultPendingPayments.length}
+                </span>
+              )}
+            </button>
+          </div>
           <Link to="/invoices" className="text-sm font-bold text-orange-600 transition-colors duration-200 hover:text-orange-700">
             View all →
           </Link>
         </div>
-        <InvoiceTable invoices={stats.recentInvoices} />
+        
+        {activeTab === 'recent' ? (
+          <InvoiceTable invoices={stats.recentInvoices} />
+        ) : (
+          <InvoiceTable invoices={stats.cultPendingPayments} />
+        )}
       </section>
 
       {/* ─── Pending Invoices Modal ─── */}
@@ -339,7 +373,6 @@ const StatCard = ({
   return <article className={baseClassName}>{content}</article>
 }
 
-/* ─── Status Breakdown Bar ─── */
 const statusColors: Record<InvoiceStatus, string> = {
   Draft: 'bg-slate-400',
   Sent: 'bg-amber-400',
@@ -347,6 +380,8 @@ const statusColors: Record<InvoiceStatus, string> = {
   InProcessPNR: 'bg-violet-400',
   PNRIssued: 'bg-indigo-400',
   Completed: 'bg-emerald-400',
+  VoucherGeneratedPaymentPending: 'bg-fuchsia-400',
+  PaymentDone: 'bg-teal-400',
 }
 
 const statusDotColors: Record<InvoiceStatus, string> = {
@@ -356,6 +391,8 @@ const statusDotColors: Record<InvoiceStatus, string> = {
   InProcessPNR: 'bg-violet-400',
   PNRIssued: 'bg-indigo-400',
   Completed: 'bg-emerald-400',
+  VoucherGeneratedPaymentPending: 'bg-fuchsia-400',
+  PaymentDone: 'bg-teal-400',
 }
 
 const StatusBar = ({ breakdown, total }: { breakdown: Record<InvoiceStatus, number>; total: number }) => {

@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-export const invoiceStatuses = ['Draft', 'Sent', 'Paid', 'InProcessPNR', 'PNRIssued', 'Completed'] as const
+export const invoiceStatuses = ['Draft', 'Sent', 'Paid', 'InProcessPNR', 'PNRIssued', 'Completed', 'VoucherGeneratedPaymentPending', 'PaymentDone'] as const
 
 export type InvoiceStatus = (typeof invoiceStatuses)[number]
 
@@ -11,6 +11,8 @@ export const invoiceStatusLabels: Record<InvoiceStatus, string> = {
   InProcessPNR: 'In Process PNR',
   PNRIssued: 'PNR Issued',
   Completed: 'Completed',
+  VoucherGeneratedPaymentPending: 'Voucher Generated and Payment Pending',
+  PaymentDone: 'Payment Done',
 }
 
 export const travelClasses = ['Economy', 'Business', 'First'] as const

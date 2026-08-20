@@ -1,4 +1,4 @@
-import { LayoutDashboard, FileText, FilePlus, Settings, Zap } from 'lucide-react'
+import { LayoutDashboard, FileText, FilePlus, Settings, Zap, Dumbbell } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { NavLink, Outlet } from 'react-router'
 
@@ -6,6 +6,7 @@ const navItems: { to: string; label: string; icon: ReactNode }[] = [
   { to: '/', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
   { to: '/invoices', label: 'Invoices', icon: <FileText size={18} /> },
   { to: '/invoices/new', label: 'New Invoice', icon: <FilePlus size={18} /> },
+  { to: '/cult-fit/new', label: 'Cult Fit (1M)', icon: <Dumbbell size={18} /> },
   { to: '/settings', label: 'Settings', icon: <Settings size={18} /> },
 ]
 
@@ -89,7 +90,7 @@ export const AppShell = () => (
         </div>
         <span className="text-[11px] font-bold uppercase tracking-wider text-orange-400">CRM</span>
       </div>
-      <nav className="grid grid-cols-4 gap-1.5" aria-label="Main navigation">
+      <nav className="grid grid-cols-5 gap-1.5" aria-label="Main navigation">
         {navItems.map((item) => (
           <NavLink
             key={item.to}

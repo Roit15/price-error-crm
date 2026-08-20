@@ -8,6 +8,8 @@ const styles: Record<InvoiceStatus, string> = {
   InProcessPNR: 'bg-violet-50 text-violet-800 ring-violet-200/80',
   PNRIssued: 'bg-indigo-50 text-indigo-800 ring-indigo-200/80',
   Completed: 'bg-emerald-50 text-emerald-800 ring-emerald-200/80',
+  VoucherGeneratedPaymentPending: 'bg-orange-50 text-orange-800 ring-orange-200/80',
+  PaymentDone: 'bg-teal-50 text-teal-800 ring-teal-200/80',
 }
 
 const pulsing = new Set<InvoiceStatus>(['Sent', 'InProcessPNR', 'Paid'])

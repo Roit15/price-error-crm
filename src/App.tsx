@@ -4,6 +4,7 @@ import { DashboardPage } from './pages/DashboardPage'
 import { InvoiceFormPage } from './pages/InvoiceFormPage'
 import { InvoiceListPage } from './pages/InvoiceListPage'
 import { InvoicePreviewPage } from './pages/InvoicePreviewPage'
+import { CultFitInvoicePage } from './pages/CultFitInvoicePage'
 import { SettingsPage } from './pages/SettingsPage'
 
 export const App = () => (
@@ -12,6 +13,7 @@ export const App = () => (
       <Route index element={<DashboardPage />} />
       <Route path="invoices" element={<InvoiceListPage />} />
       <Route path="invoices/new" element={<InvoiceFormPage />} />
+      <Route path="cult-fit/new" element={<CultFitInvoicePage />} />
       <Route path="invoices/:invoiceId/edit" element={<InvoiceFormPage />} />
       <Route path="invoices/:invoiceId/preview" element={<InvoicePreviewPage />} />
       <Route path="settings" element={<SettingsPage />} />
