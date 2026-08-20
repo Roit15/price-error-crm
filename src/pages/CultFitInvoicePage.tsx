@@ -67,7 +67,7 @@ export const CultFitInvoicePage = () => {
             type="button"
             onClick={() => void onSubmit()}
             disabled={isSaving}
-            className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-orange-500/20 transition-all duration-200 hover:shadow-lg hover:shadow-orange-500/30 hover:-translate-y-0.5 disabled:opacity-70"
+            className="inline-flex w-full sm:w-auto justify-center min-h-11 items-center gap-2 rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-orange-500/20 transition-all duration-200 hover:shadow-lg hover:shadow-orange-500/30 hover:-translate-y-0.5 disabled:opacity-70"
           >
             {isSaving ? 'Creating...' : 'Create & Preview'}
           </button>

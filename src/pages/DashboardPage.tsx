@@ -61,13 +61,13 @@ export const DashboardPage = () => {
         : 0
 
   const monthSelector = (
-    <label className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700 shadow-sm">
+    <label className="inline-flex w-full sm:w-auto items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700 shadow-sm">
       <CalendarRange size={15} className="text-slate-400" />
       <span className="sr-only">Month</span>
       <select
         value={selectedMonth}
         onChange={(event) => setSelectedMonth(event.target.value)}
-        className="min-h-6 bg-transparent pr-1 text-sm font-bold text-slate-700 outline-none"
+        className="min-h-6 flex-1 bg-transparent pr-1 text-sm font-bold text-slate-700 outline-none"
       >
         <option value={ALL_MONTHS}>All time</option>
         {months.map((month) => (
@@ -85,7 +85,7 @@ export const DashboardPage = () => {
       onClick={sendPnrReminder}
       disabled={pendingPnrCount === 0}
       title={pendingPnrCount === 0 ? 'No pending PNR tickets' : `Send a WhatsApp reminder for ${pendingPnrCount} pending PNR ticket(s)`}
-      className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-700 shadow-sm transition-all duration-200 hover:bg-emerald-100 hover:shadow disabled:cursor-not-allowed disabled:opacity-50"
+      className="inline-flex w-full sm:w-auto justify-center min-h-11 items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-700 shadow-sm transition-all duration-200 hover:bg-emerald-100 hover:shadow disabled:cursor-not-allowed disabled:opacity-50"
     >
       <BellRing size={15} />
       PNR Reminder{pendingPnrCount > 0 ? ` (${pendingPnrCount})` : ''}
@@ -95,7 +95,7 @@ export const DashboardPage = () => {
   const newInvoiceButton = (
     <Link
       to="/invoices/new"
-      className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-orange-500/20 transition-all duration-200 hover:shadow-lg hover:shadow-orange-500/30 hover:-translate-y-0.5"
+      className="inline-flex w-full sm:w-auto justify-center min-h-11 items-center gap-2 rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-orange-500/20 transition-all duration-200 hover:shadow-lg hover:shadow-orange-500/30 hover:-translate-y-0.5"
     >
       New Invoice
     </Link>
@@ -121,10 +121,10 @@ export const DashboardPage = () => {
           eyebrow="Operations"
           title="Dashboard"
           actions={
-            <>
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
               {reminderButton}
               {newInvoiceButton}
-            </>
+            </div>
           }
         />
         {error ? <CentralDbBanner message={error} onRetry={() => void reload()} /> : null}
@@ -153,12 +153,12 @@ export const DashboardPage = () => {
         eyebrow="Operations"
         title="Dashboard"
         actions={
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row flex-wrap gap-2 w-full sm:w-auto">
             {monthSelector}
             {reminderButton}
             <Link
               to="/cult-fit/new"
-              className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-gradient-to-r from-purple-500 to-purple-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-purple-500/20 transition-all duration-200 hover:shadow-lg hover:shadow-purple-500/30 hover:-translate-y-0.5"
+              className="inline-flex w-full sm:w-auto justify-center min-h-11 items-center gap-2 rounded-lg bg-gradient-to-r from-purple-500 to-purple-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-purple-500/20 transition-all duration-200 hover:shadow-lg hover:shadow-purple-500/30 hover:-translate-y-0.5"
             >
               New Cult Fit Invoice
             </Link>
@@ -236,8 +236,8 @@ export const DashboardPage = () => {
 
       {/* ─── Invoices Tabs ─── */}
       <section className="mt-8 animate-slide-up glass-card rounded-xl p-5" style={{ animationDelay: '300ms' }}>
-        <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-3">
-          <div className="flex gap-6">
+        <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-3">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-6">
             <button
               onClick={() => setActiveTab('recent')}
               className={`text-lg font-black tracking-tight transition-colors duration-200 ${
