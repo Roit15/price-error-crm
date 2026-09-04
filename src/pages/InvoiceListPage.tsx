@@ -8,6 +8,7 @@ import { invoiceStatuses, invoiceStatusLabels, invoiceTypeLabels, invoiceTypes, 
 import { buildPendingPnrReminderUrl, getPendingPnrInvoices } from '../domain/whatsapp'
 import { invoiceRepository } from '../persistence/invoiceRepository'
 import { useInvoices } from '../services/useInvoices'
+import { useCanceledPnrs } from '../services/useCanceledPnrs'
 
 type StatusFilter = 'All' | InvoiceStatus
 type TypeFilter = 'All' | InvoiceType
@@ -21,6 +22,7 @@ const presetLabels: Record<'pending' | 'pnr', string> = {
 
 export const InvoiceListPage = () => {
   const { invoices, isLoading, error, reload } = useInvoices()
+  const { pnrs: canceledPnrs } = useCanceledPnrs()
   const [searchParams] = useSearchParams()
 
   const [query, setQuery] = useState('')
@@ -45,7 +47,7 @@ export const InvoiceListPage = () => {
     const matchingInvoices = invoices.filter((invoice) => {
       const matchesStatus =
         preset === 'pending'
-          ? invoice.status !== 'Completed'
+          ? invoice.status !== 'Completed' && invoice.status !== 'PaymentDone'
           : preset === 'pnr'
             ? invoice.status === 'Paid' || invoice.status === 'InProcessPNR'
             : status === 'All' || invoice.status === status
@@ -78,13 +80,15 @@ export const InvoiceListPage = () => {
   }
 
   const pendingPnrCount = useMemo(() => getPendingPnrInvoices(invoices).length, [invoices])
+  const canceledPnrCount = canceledPnrs.length
+  const totalReminderCount = pendingPnrCount + canceledPnrCount
 
   const sendPnrReminder = () => {
-    if (pendingPnrCount === 0) {
-      window.alert('No pending PNR tickets to remind about.')
+    if (totalReminderCount === 0) {
+      window.alert('No pending or canceled PNR tickets to remind about.')
       return
     }
-    window.open(buildPendingPnrReminderUrl(invoices), '_blank', 'noopener,noreferrer')
+    window.open(buildPendingPnrReminderUrl(invoices, canceledPnrs), '_blank', 'noopener,noreferrer')
   }
 
   const hasActiveFilters = status !== 'All' || typeFilter !== 'All' || dateFrom || dateTo || query || preset !== null

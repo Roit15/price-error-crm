@@ -56,8 +56,8 @@ describe('buildDashboardStats', () => {
 
     expect(stats.totalInvoices).toBe(8)
     expect(stats.revenueCollected).toBe(1_400)
-    expect(stats.pendingPaymentCount).toBe(6)
-    expect(stats.pendingPaymentValue).toBe(2_050)
+    expect(stats.pendingPaymentCount).toBe(7)
+    expect(stats.pendingPaymentValue).toBe(2_200)
     expect(stats.pnrPendingCount).toBe(2)
     expect(stats.paymentBreakdown.flightBookings).toEqual({ salesCount: 1, revenue: 500 })
     expect(stats.paymentBreakdown.digitalServices).toEqual({ salesCount: 1, revenue: 900 })

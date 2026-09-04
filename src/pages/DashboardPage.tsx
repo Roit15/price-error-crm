@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
-import { TrendingUp, TrendingDown, Minus, FileText, IndianRupee, Clock, Plane, X, BellRing, CalendarRange } from 'lucide-react'
+import { TrendingUp, TrendingDown, Minus, FileText, IndianRupee, Clock, Plane, X, BellRing, CalendarRange, Ban, Trash2, Plus } from 'lucide-react'
 import { CentralDbBanner } from '../components/CentralDbBanner'
 import { InvoiceTable } from '../components/InvoiceTable'
 import { PageHeader } from '../components/PageHeader'
@@ -18,24 +18,31 @@ import { invoiceStatusLabels, type InvoiceStatus } from '../domain/invoice'
 import { formatInr } from '../domain/pricing'
 import { buildPendingPnrReminderUrl, getPendingPnrInvoices } from '../domain/whatsapp'
 import { useInvoices } from '../services/useInvoices'
+import { useCanceledPnrs } from '../services/useCanceledPnrs'
+import { canceledPnrRepository } from '../persistence/canceledPnrRepository'
 
 export const DashboardPage = () => {
   const { invoices, isLoading, error, reload } = useInvoices()
   const [selectedMonth, setSelectedMonth] = useState<string>(ALL_MONTHS)
   const [isPendingModalOpen, setIsPendingModalOpen] = useState(false)
+  const [isCanceledPnrModalOpen, setIsCanceledPnrModalOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<'recent' | 'cultPending'>('recent')
+
+  const { pnrs: canceledPnrs, reload: reloadPnrs } = useCanceledPnrs()
 
   const months = useMemo(() => listInvoiceMonths(invoices), [invoices])
   const scopedInvoices = useMemo(() => filterInvoicesByMonth(invoices, selectedMonth), [invoices, selectedMonth])
   const stats = buildDashboardStats(scopedInvoices)
 
   const pendingPnrCount = getPendingPnrInvoices(invoices).length
+  const canceledPnrCount = canceledPnrs.length
+  const totalReminderCount = pendingPnrCount + canceledPnrCount
   const sendPnrReminder = () => {
-    if (pendingPnrCount === 0) {
-      window.alert('No pending PNR tickets to remind about.')
+    if (totalReminderCount === 0) {
+      window.alert('No pending or canceled PNR tickets to remind about.')
       return
     }
-    window.open(buildPendingPnrReminderUrl(invoices), '_blank', 'noopener,noreferrer')
+    window.open(buildPendingPnrReminderUrl(invoices, canceledPnrs), '_blank', 'noopener,noreferrer')
   }
 
   // Build a link into the Invoices list carrying the active filters plus the selected month's date range.
@@ -83,12 +90,23 @@ export const DashboardPage = () => {
     <button
       type="button"
       onClick={sendPnrReminder}
-      disabled={pendingPnrCount === 0}
-      title={pendingPnrCount === 0 ? 'No pending PNR tickets' : `Send a WhatsApp reminder for ${pendingPnrCount} pending PNR ticket(s)`}
+      disabled={totalReminderCount === 0}
+      title={totalReminderCount === 0 ? 'No pending or canceled PNR tickets' : `Send a WhatsApp reminder for ${pendingPnrCount} pending and ${canceledPnrCount} canceled PNR ticket(s)`}
       className="inline-flex w-full sm:w-auto justify-center min-h-11 items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-700 shadow-sm transition-all duration-200 hover:bg-emerald-100 hover:shadow disabled:cursor-not-allowed disabled:opacity-50"
     >
       <BellRing size={15} />
-      PNR Reminder{pendingPnrCount > 0 ? ` (${pendingPnrCount})` : ''}
+      PNR Reminder{totalReminderCount > 0 ? ` (${totalReminderCount})` : ''}
+    </button>
+  )
+
+  const canceledPnrButton = (
+    <button
+      type="button"
+      onClick={() => setIsCanceledPnrModalOpen(true)}
+      className="inline-flex w-full sm:w-auto justify-center min-h-11 items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-bold text-rose-700 shadow-sm transition-all duration-200 hover:bg-rose-100 hover:shadow"
+    >
+      <Ban size={15} />
+      Canceled PNRs{canceledPnrCount > 0 ? ` (${canceledPnrCount})` : ''}
     </button>
   )
 
@@ -122,6 +140,7 @@ export const DashboardPage = () => {
           title="Dashboard"
           actions={
             <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              {canceledPnrButton}
               {reminderButton}
               {newInvoiceButton}
             </div>
@@ -155,6 +174,7 @@ export const DashboardPage = () => {
         actions={
           <div className="flex flex-col sm:flex-row flex-wrap gap-2 w-full sm:w-auto">
             {monthSelector}
+            {canceledPnrButton}
             {reminderButton}
             <Link
               to="/cult-fit/new"
@@ -303,6 +323,11 @@ export const DashboardPage = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ─── Canceled PNRs Modal ─── */}
+      {isCanceledPnrModalOpen && (
+        <CanceledPnrModal onClose={() => setIsCanceledPnrModalOpen(false)} canceledPnrs={canceledPnrs} onUpdate={reloadPnrs} />
       )}
     </>
   )
@@ -480,5 +505,105 @@ const PaymentCategory = ({
     </Link>
   ) : (
     <article className={className}>{content}</article>
+  )
+}
+
+const CanceledPnrModal = ({ onClose, canceledPnrs, onUpdate }: { onClose: () => void, canceledPnrs: import('../domain/canceledPnr').CanceledPnr[], onUpdate: () => void }) => {
+  const [name, setName] = useState('')
+  const [phone, setPhone] = useState('')
+  const [origin, setOrigin] = useState('')
+  const [destination, setDestination] = useState('')
+  const [departureDate, setDepartureDate] = useState(new Date().toISOString().slice(0, 10))
+
+  const handleAdd = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!name.trim()) return
+    const id = crypto.randomUUID()
+    await canceledPnrRepository.save({
+      id,
+      name,
+      phone,
+      origin,
+      destination,
+      departureDate,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    })
+    onUpdate()
+    setName('')
+    setPhone('')
+    setOrigin('')
+    setDestination('')
+  }
+
+  const removeCanceledPnr = async (id: string) => {
+    await canceledPnrRepository.delete(id)
+    onUpdate()
+  }
+
+  const clearCanceledPnrs = async () => {
+    if (!window.confirm('Are you sure you want to clear all canceled PNRs?')) return
+    await Promise.all(canceledPnrs.map(pnr => canceledPnrRepository.delete(pnr.id)))
+    onUpdate()
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl animate-in zoom-in-95 duration-200">
+        <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/50 p-4 md:p-6">
+          <div>
+            <h2 className="text-xl font-black tracking-tight text-slate-950">Canceled PNRs</h2>
+            <p className="text-sm font-medium text-slate-500">Standalone list included in WhatsApp reminders.</p>
+          </div>
+          <button onClick={onClose} className="rounded-xl p-2 text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-700">
+            <X size={24} />
+          </button>
+        </div>
+        
+        <div className="flex-1 overflow-auto p-4 md:p-6 bg-slate-50">
+          <form onSubmit={handleAdd} className="mb-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <h3 className="mb-3 text-sm font-bold text-slate-700">Add New Entry</h3>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              <input required placeholder="Name" value={name} onChange={e => setName(e.target.value)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 lg:col-span-1" />
+              <input placeholder="Phone" value={phone} onChange={e => setPhone(e.target.value)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 lg:col-span-1" />
+              <input placeholder="Origin" value={origin} onChange={e => setOrigin(e.target.value)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 lg:col-span-1" />
+              <input placeholder="Destination" value={destination} onChange={e => setDestination(e.target.value)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 lg:col-span-1" />
+              <input type="date" required value={departureDate} onChange={e => setDepartureDate(e.target.value)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 lg:col-span-1" />
+            </div>
+            <div className="mt-3 flex justify-end">
+              <button type="submit" className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white hover:bg-slate-800">
+                <Plus size={16} /> Add Entry
+              </button>
+            </div>
+          </form>
+
+          {canceledPnrs.length === 0 ? (
+             <div className="rounded-xl border border-dashed border-slate-300 py-12 text-center text-sm text-slate-500">
+               No canceled PNRs added.
+             </div>
+          ) : (
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+              <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-4 py-3">
+                <h3 className="text-sm font-bold text-slate-700">Current Entries ({canceledPnrs.length})</h3>
+                <button onClick={clearCanceledPnrs} className="text-xs font-bold text-rose-600 hover:text-rose-700">Clear All</button>
+              </div>
+              <ul className="divide-y divide-slate-100">
+                {canceledPnrs.map((pnr) => (
+                  <li key={pnr.id} className="flex items-center justify-between p-4 hover:bg-slate-50">
+                    <div>
+                      <p className="font-bold text-slate-900">{pnr.name} <span className="font-normal text-slate-500">{pnr.phone}</span></p>
+                      <p className="text-sm text-slate-500">{pnr.origin} to {pnr.destination} &bull; {pnr.departureDate}</p>
+                    </div>
+                    <button onClick={() => removeCanceledPnr(pnr.id)} className="rounded-lg p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600">
+                      <Trash2 size={18} />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   )
 }

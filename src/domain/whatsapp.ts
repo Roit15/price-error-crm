@@ -1,6 +1,7 @@
 import type { AppSettings, Invoice } from './invoice'
 import { getInvoiceTerms } from './invoiceContent'
 import { formatInr } from './pricing'
+import type { CanceledPnr } from './canceledPnr'
 
 const normalizePhoneForWhatsApp = (phone: string) => {
   const digits = phone.replace(/\D/g, '')
@@ -34,39 +35,65 @@ export const getPendingPnrInvoices = (invoices: Invoice[]) =>
       invoice.invoiceType === 'FlightTicket' && (invoice.status === 'Paid' || invoice.status === 'InProcessPNR'),
   )
 
-export const buildPendingPnrReminderMessage = (invoices: Invoice[]) => {
+export const buildPendingPnrReminderMessage = (invoices: Invoice[], canceled: CanceledPnr[]) => {
   const pending = getPendingPnrInvoices(invoices)
 
-  if (pending.length === 0) {
+  if (pending.length === 0 && canceled.length === 0) {
     return 'No pending PNR tickets right now.'
   }
 
-  const lines = pending.map((invoice, index) => {
-    const route = [invoice.flight.origin, invoice.flight.destination].filter(Boolean).join(' to ') || 'N/A'
-    return [
-      `${index + 1}. ${invoice.customer.name || 'Unknown'}`,
-      `   Phone: ${invoice.customer.phone || 'N/A'}`,
-      `   Route: ${route}`,
-      `   Fly date: ${formatReminderDate(invoice.flight.departureDate)}`,
-      `   Passengers: ${invoice.flight.passengerCount}`,
-      `   Pending amount: ${formatInr(Math.max(0, invoice.pricing.total - (invoice.pricing.advancePayment ?? 0)))}`,
-      `   Days since invoice: ${daysSinceInvoice(invoice.createdAt)}`,
-    ].join('\n')
-  })
+  const sections: string[] = []
 
-  const totalPending = pending.reduce((sum, invoice) => sum + invoice.pricing.total, 0)
+  if (pending.length > 0) {
+    const lines = pending.map((invoice, index) => {
+      const route = [invoice.flight.origin, invoice.flight.destination].filter(Boolean).join(' to ') || 'N/A'
+      return [
+        `${index + 1}. ${invoice.customer.name || 'Unknown'}`,
+        `   Phone: ${invoice.customer.phone || 'N/A'}`,
+        `   Route: ${route}`,
+        `   Fly date: ${formatReminderDate(invoice.flight.departureDate)}`,
+        `   Passengers: ${invoice.flight.passengerCount}`,
+        `   Pending amount: ${formatInr(Math.max(0, invoice.pricing.total - (invoice.pricing.advancePayment ?? 0)))}`,
+        `   Days since invoice: ${daysSinceInvoice(invoice.createdAt)}`,
+      ].join('\n')
+    })
 
-  return [
-    `Pending PNR reminder - ${pending.length} ticket${pending.length === 1 ? '' : 's'}`,
-    '',
-    lines.join('\n\n'),
-    '',
-    `Total pending amount: ${formatInr(totalPending)}`,
-  ].join('\n')
+    const totalPending = pending.reduce((sum, invoice) => sum + invoice.pricing.total, 0)
+
+    const pendingStr = `${pending.length} ticket${pending.length !== 1 ? 's' : ''}`
+    const canceledStr = canceled.length > 0 ? ` and ${canceled.length} canceled` : ''
+    sections.push([
+      `*Pending PNR reminder - ${pendingStr}${canceledStr}*`,
+      '',
+      lines.join('\n\n'),
+      '',
+      `Total pending amount: ${formatInr(totalPending)}`,
+    ].join('\n'))
+  }
+
+  if (canceled.length > 0) {
+    const canceledLines = canceled.map((pnr, index) => {
+      const route = [pnr.origin, pnr.destination].filter(Boolean).join(' to ') || 'N/A'
+      return [
+        `${index + 1}. ${pnr.name || 'Unknown'}`,
+        `   Phone: ${pnr.phone || 'N/A'}`,
+        `   Route: ${route}`,
+        `   Fly date: ${formatReminderDate(pnr.departureDate)}`,
+      ].join('\n')
+    })
+
+    sections.push([
+      `─── Canceled PNR — ${canceled.length} ticket${canceled.length === 1 ? '' : 's'} ───`,
+      '',
+      canceledLines.join('\n\n'),
+    ].join('\n'))
+  }
+
+  return sections.join('\n\n')
 }
 
-export const buildPendingPnrReminderUrl = (invoices: Invoice[]) => {
-  const message = encodeURIComponent(buildPendingPnrReminderMessage(invoices))
+export const buildPendingPnrReminderUrl = (invoices: Invoice[], canceled: CanceledPnr[]) => {
+  const message = encodeURIComponent(buildPendingPnrReminderMessage(invoices, canceled))
   return `https://wa.me/${REMINDER_WHATSAPP_NUMBER}?text=${message}`
 }
 

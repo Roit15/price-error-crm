@@ -62,13 +62,13 @@ export const previousMonthKey = (monthKey: string) => {
 // Revenue from invoices marked Completed within a given month (by completion/update date).
 export const completedRevenueInMonth = (invoices: Invoice[], monthKey: string) =>
   invoices
-    .filter((invoice) => invoice.status === 'Completed' && getMonthKey(invoice.updatedAt) === monthKey)
+    .filter((invoice) => (invoice.status === 'Completed' || invoice.status === 'PaymentDone') && getMonthKey(invoice.updatedAt) === monthKey)
     .reduce((total, invoice) => total + invoice.pricing.total, 0)
 
 export const buildDashboardStats = (invoices: Invoice[]): DashboardStats => {
   const sortedInvoices = [...invoices].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-  const completedInvoices = invoices.filter((invoice) => invoice.status === 'Completed')
-  const pendingPaymentInvoices = invoices.filter((invoice) => invoice.status !== 'Completed')
+  const completedInvoices = invoices.filter((invoice) => invoice.status === 'Completed' || invoice.status === 'PaymentDone')
+  const pendingPaymentInvoices = invoices.filter((invoice) => invoice.status !== 'Completed' && invoice.status !== 'PaymentDone')
   const completedDigitalServices = completedInvoices.filter((invoice) => invoice.invoiceType === 'DigitalService')
   const completedFlightBookings = completedInvoices.filter((invoice) => invoice.invoiceType === 'FlightTicket')
 
@@ -98,7 +98,7 @@ export const buildDashboardStats = (invoices: Invoice[]): DashboardStats => {
   return {
     totalInvoices: invoices.length,
     revenueCollected: invoices.reduce(
-      (total, invoice) => total + (invoice.status === 'Completed' ? invoice.pricing.total : (invoice.pricing.advancePayment ?? 0)),
+      (total, invoice) => total + (invoice.status === 'Completed' || invoice.status === 'PaymentDone' ? invoice.pricing.total : (invoice.pricing.advancePayment ?? 0)),
       0,
     ),
     pendingPaymentCount: pendingPaymentInvoices.length,

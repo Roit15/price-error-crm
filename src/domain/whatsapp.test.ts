@@ -64,7 +64,7 @@ describe('buildPendingPnrReminderMessage', () => {
         },
         pricing: { totalFare: 24000, discountPercentage: 0, discountAmount: 0, total: 24000, advancePayment: 5000 },
       }),
-    ])
+    ], [])
 
     expect(message).toContain('Pending PNR reminder - 1 ticket')
     expect(message).toContain('1. Rahul Sharma')
@@ -79,13 +79,34 @@ describe('buildPendingPnrReminderMessage', () => {
   })
 
   it('reports when nothing is pending', () => {
-    expect(buildPendingPnrReminderMessage([invoice({ status: 'Completed' })])).toBe('No pending PNR tickets right now.')
+    expect(buildPendingPnrReminderMessage([invoice({ status: 'Completed' })], [])).toBe('No pending PNR tickets right now.')
+  })
+
+  it('includes canceled PNR section with name, phone, route, fly date', () => {
+    const message = buildPendingPnrReminderMessage([], [
+      {
+        id: '2',
+        name: 'Bob Jones',
+        phone: '+0987654321',
+        origin: 'JFK',
+        destination: 'CDG',
+        departureDate: '2025-06-20',
+        createdAt: '2025-05-01T00:00:00.000Z',
+        updatedAt: '2025-05-01T00:00:00.000Z',
+      },
+    ])
+
+    expect(message).toContain('Bob Jones')
+    expect(message).toContain('Phone: +0987654321')
+    expect(message).toContain('JFK to CDG')
+    expect(message).toContain('Fly date:')
+    expect(message).toContain('Canceled PNR')
   })
 })
 
 describe('buildPendingPnrReminderUrl', () => {
   it('targets the reminder WhatsApp number with an encoded message', () => {
-    const url = buildPendingPnrReminderUrl([invoice({ status: 'Paid' })])
+    const url = buildPendingPnrReminderUrl([invoice({ status: 'Paid' })], [])
     expect(url.startsWith(`https://wa.me/${REMINDER_WHATSAPP_NUMBER}?text=`)).toBe(true)
     expect(url).toContain('%0A')
   })
