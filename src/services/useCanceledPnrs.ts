@@ -13,6 +13,27 @@ export const useCanceledPnrs = () => {
     if (isFetchingRef.current) return
     isFetchingRef.current = true
     try {
+      // Migrate old zustand local storage if it exists
+      const localStr = localStorage.getItem('canceled-pnr-storage')
+      if (localStr) {
+        try {
+          const parsed = JSON.parse(localStr)
+          const oldPnrs = parsed.state?.canceledPnrs
+          if (Array.isArray(oldPnrs) && oldPnrs.length > 0) {
+            const now = new Date().toISOString()
+            const pnrsToMigrate = oldPnrs.map(p => ({
+              ...p,
+              createdAt: p.createdAt || now,
+              updatedAt: p.updatedAt || now
+            }))
+            await canceledPnrRepository.bulkPut(pnrsToMigrate)
+          }
+        } catch (e) {
+          console.error('Failed to migrate canceled PNRs:', e)
+        }
+        localStorage.removeItem('canceled-pnr-storage')
+      }
+
       const data = await canceledPnrRepository.list()
       setPnrs(data)
       setError(null)
