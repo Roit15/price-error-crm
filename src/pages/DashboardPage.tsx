@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
-import { TrendingUp, TrendingDown, Minus, FileText, IndianRupee, Clock, Plane, X, BellRing, CalendarRange, Ban, Trash2, Plus } from 'lucide-react'
+import { TrendingUp, TrendingDown, Minus, FileText, IndianRupee, Clock, Plane, X, BellRing, CalendarRange, Ban, Trash2, Plus, Dumbbell } from 'lucide-react'
 import { CentralDbBanner } from '../components/CentralDbBanner'
 import { InvoiceTable } from '../components/InvoiceTable'
 import { PageHeader } from '../components/PageHeader'
@@ -119,6 +119,16 @@ export const DashboardPage = () => {
     </Link>
   )
 
+  const newCultInvoiceButton = (
+    <Link
+      to="/cult-fit/new"
+      className="inline-flex min-h-11 w-full sm:w-auto items-center justify-center gap-2 rounded-lg border border-purple-200 bg-purple-50 px-4 py-2 text-sm font-bold text-purple-700 shadow-sm transition-all duration-200 hover:bg-purple-100 hover:shadow hover:-translate-y-0.5"
+    >
+      <Dumbbell size={15} />
+      Cult Invoice
+    </Link>
+  )
+
   if (isLoading) {
     return (
       <>
@@ -142,6 +152,7 @@ export const DashboardPage = () => {
             <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
               {canceledPnrButton}
               {reminderButton}
+              {newCultInvoiceButton}
               {newInvoiceButton}
             </div>
           }
@@ -176,12 +187,7 @@ export const DashboardPage = () => {
             {monthSelector}
             {canceledPnrButton}
             {reminderButton}
-            <Link
-              to="/cult-fit/new"
-              className="inline-flex w-full sm:w-auto justify-center min-h-11 items-center gap-2 rounded-lg bg-gradient-to-r from-purple-500 to-purple-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-purple-500/20 transition-all duration-200 hover:shadow-lg hover:shadow-purple-500/30 hover:-translate-y-0.5"
-            >
-              New Cult Fit Invoice
-            </Link>
+            {newCultInvoiceButton}
             {newInvoiceButton}
           </div>
         }
