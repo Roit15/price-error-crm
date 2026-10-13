@@ -6,7 +6,6 @@ import { InvoiceTable } from '../components/InvoiceTable'
 import { PageHeader } from '../components/PageHeader'
 import {
   ALL_MONTHS,
-  CULT_COST_PER_MEMBERSHIP,
   buildDashboardStats,
   completedRevenueInMonth,
   filterInvoicesByMonth,
@@ -240,30 +239,6 @@ export const DashboardPage = () => {
         />
       </section>
 
-      {/* ─── Payment Categories ─── */}
-      <section className="mt-4 grid gap-4 lg:grid-cols-3 stagger-children">
-        <PaymentCategory
-          eyebrow="Digital Services"
-          title="Digital service sales"
-          salesCount={stats.paymentBreakdown.digitalServices.salesCount}
-          revenue={stats.paymentBreakdown.digitalServices.revenue}
-          accent="orange"
-          to={buildInvoicesLink({ type: 'DigitalService', status: 'Completed' })}
-        />
-        <PaymentCategory
-          eyebrow="Flight Bookings"
-          title="Flight booked revenue"
-          salesCount={stats.paymentBreakdown.flightBookings.salesCount}
-          revenue={stats.paymentBreakdown.flightBookings.revenue}
-          accent="emerald"
-          to={buildInvoicesLink({ type: 'FlightTicket', status: 'Completed' })}
-        />
-        <CultMembershipCard
-          totalSales={stats.cultMembership.totalSales}
-          totalRevenue={stats.cultMembership.totalRevenue}
-          totalProfit={stats.cultMembership.totalProfit}
-        />
-      </section>
 
       {/* ─── Invoices Tabs ─── */}
       <section className="mt-8 animate-slide-up glass-card rounded-xl p-5" style={{ animationDelay: '300ms' }}>
@@ -412,114 +387,6 @@ const StatCard = ({
   return <article className={baseClassName}>{content}</article>
 }
 
-/* ─── Payment Category ─── */
-const categoryAccents = {
-  orange: {
-    badge: 'bg-orange-50 text-orange-700 ring-orange-200/80',
-    gradient: 'from-orange-50 to-white',
-  },
-  emerald: {
-    badge: 'bg-emerald-50 text-emerald-700 ring-emerald-200/80',
-    gradient: 'from-emerald-50 to-white',
-  },
-}
-
-const PaymentCategory = ({
-  eyebrow,
-  title,
-  salesCount,
-  revenue,
-  accent,
-  to,
-}: {
-  eyebrow: string
-  title: string
-  salesCount: number
-  revenue: number
-  accent: keyof typeof categoryAccents
-  to?: string
-}) => {
-  const content = (
-    <>
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className={`inline-flex rounded-full px-2.5 py-1 text-xs font-black ring-1 ${categoryAccents[accent].badge}`}>{eyebrow}</p>
-          <h3 className="mt-3 text-lg font-black tracking-tight text-slate-950">{title}</h3>
-        </div>
-        <p className="text-right text-2xl font-black text-slate-950">{formatInr(revenue)}</p>
-      </div>
-      <div className="mt-4 grid grid-cols-2 gap-3">
-        <div className={`rounded-lg bg-gradient-to-br ${categoryAccents[accent].gradient} p-3`}>
-          <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Sales</p>
-          <p className="mt-1 text-xl font-black text-slate-950">{salesCount}</p>
-        </div>
-        <div className={`rounded-lg bg-gradient-to-br ${categoryAccents[accent].gradient} p-3`}>
-          <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Revenue</p>
-          <p className="mt-1 text-xl font-black text-slate-950">{formatInr(revenue)}</p>
-        </div>
-      </div>
-    </>
-  )
-
-  const className = 'glass-card hover-lift block rounded-xl p-5'
-
-  return to ? (
-    <Link to={to} className={`${className} transition-transform focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/40`}>
-      {content}
-    </Link>
-  ) : (
-    <article className={className}>{content}</article>
-  )
-}
-
-/* ─── Cult Membership Card ─── */
-const CultMembershipCard = ({
-  totalSales,
-  totalRevenue,
-  totalProfit,
-}: {
-  totalSales: number
-  totalRevenue: number
-  totalProfit: number
-}) => {
-  const totalCost = totalSales * CULT_COST_PER_MEMBERSHIP
-  return (
-    <article className="glass-card hover-lift rounded-xl p-5">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="inline-flex rounded-full px-2.5 py-1 text-xs font-black ring-1 bg-purple-50 text-purple-700 ring-purple-200/80">
-            <Dumbbell size={12} className="mr-1.5" /> Cult Fit Memberships
-          </p>
-          <h3 className="mt-3 text-lg font-black tracking-tight text-slate-950">Cult membership sale</h3>
-        </div>
-        <p className={`text-right text-2xl font-black ${totalProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-          {formatInr(totalProfit)}
-        </p>
-      </div>
-      <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <div className="rounded-lg bg-gradient-to-br from-purple-50 to-white p-3">
-          <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Sales</p>
-          <p className="mt-1 text-xl font-black text-slate-950">{totalSales}</p>
-        </div>
-        <div className="rounded-lg bg-gradient-to-br from-purple-50 to-white p-3">
-          <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Revenue</p>
-          <p className="mt-1 text-xl font-black text-slate-950">{formatInr(totalRevenue)}</p>
-        </div>
-        <div className="rounded-lg bg-gradient-to-br from-purple-50 to-white p-3">
-          <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Cost</p>
-          <p className="mt-1 text-xl font-black text-red-600">{formatInr(totalCost)}</p>
-          <p className="text-[10px] text-slate-400">₹{CULT_COST_PER_MEMBERSHIP} × {totalSales}</p>
-        </div>
-        <div className="rounded-lg bg-gradient-to-br from-purple-50 to-white p-3">
-          <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Profit</p>
-          <p className={`mt-1 text-xl font-black ${totalProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-            {formatInr(totalProfit)}
-          </p>
-        </div>
-      </div>
-    </article>
-  )
-}
 
 const CanceledPnrModal = ({ onClose, canceledPnrs, onUpdate }: { onClose: () => void, canceledPnrs: import('../domain/canceledPnr').CanceledPnr[], onUpdate: () => void }) => {
   const [name, setName] = useState('')
