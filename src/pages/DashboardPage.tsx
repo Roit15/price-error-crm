@@ -6,6 +6,7 @@ import { InvoiceTable } from '../components/InvoiceTable'
 import { PageHeader } from '../components/PageHeader'
 import {
   ALL_MONTHS,
+  CULT_COST_PER_MEMBERSHIP,
   buildDashboardStats,
   completedRevenueInMonth,
   filterInvoicesByMonth,
@@ -14,7 +15,6 @@ import {
   monthRange,
   previousMonthKey,
 } from '../domain/dashboard'
-import { invoiceStatusLabels, type InvoiceStatus } from '../domain/invoice'
 import { formatInr } from '../domain/pricing'
 import { buildPendingPnrReminderUrl, getPendingPnrInvoices } from '../domain/whatsapp'
 import { useInvoices } from '../services/useInvoices'
@@ -133,8 +133,8 @@ export const DashboardPage = () => {
     return (
       <>
         <PageHeader eyebrow="Operations" title="Dashboard" />
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {[1, 2, 3, 4].map((i) => (
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+          {[1, 2, 3, 4, 5].map((i) => (
             <div key={i} className="skeleton h-[100px] rounded-xl" />
           ))}
         </section>
@@ -196,7 +196,7 @@ export const DashboardPage = () => {
       {error ? <CentralDbBanner message={error} onRetry={() => void reload()} /> : null}
 
       {/* ─── Stat Cards ─── */}
-      <section className="stagger-children grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <section className="stagger-children grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         <StatCard
           icon={<FileText size={18} />}
           label="Total invoices"
@@ -230,18 +230,18 @@ export const DashboardPage = () => {
           iconBg="bg-indigo-500"
           to={buildInvoicesLink({ preset: 'pnr' })}
         />
+        <StatCard
+          icon={<Dumbbell size={18} />}
+          label="Cult membership profit"
+          value={formatInr(stats.cultMembership.totalProfit)}
+          subtitle={`${stats.cultMembership.totalSales} sold · ${formatInr(stats.cultMembership.totalRevenue)} rev`}
+          gradient="from-purple-600 to-fuchsia-700"
+          iconBg="bg-purple-400"
+        />
       </section>
 
-      {/* ─── Status Breakdown Bar ─── */}
-      {stats.totalInvoices > 0 && (
-        <section className="mt-4 animate-slide-up glass-card rounded-xl p-5" style={{ animationDelay: '200ms' }}>
-          <h3 className="mb-3 text-sm font-black uppercase tracking-[0.12em] text-slate-500">Status Breakdown</h3>
-          <StatusBar breakdown={stats.statusBreakdown} total={stats.totalInvoices} />
-        </section>
-      )}
-
       {/* ─── Payment Categories ─── */}
-      <section className="mt-4 grid gap-4 lg:grid-cols-2 stagger-children">
+      <section className="mt-4 grid gap-4 lg:grid-cols-3 stagger-children">
         <PaymentCategory
           eyebrow="Digital Services"
           title="Digital service sales"
@@ -257,6 +257,11 @@ export const DashboardPage = () => {
           revenue={stats.paymentBreakdown.flightBookings.revenue}
           accent="emerald"
           to={buildInvoicesLink({ type: 'FlightTicket', status: 'Completed' })}
+        />
+        <CultMembershipCard
+          totalSales={stats.cultMembership.totalSales}
+          totalRevenue={stats.cultMembership.totalRevenue}
+          totalProfit={stats.cultMembership.totalProfit}
         />
       </section>
 
@@ -344,6 +349,7 @@ const StatCard = ({
   icon,
   label,
   value,
+  subtitle,
   gradient,
   iconBg,
   trend,
@@ -353,6 +359,7 @@ const StatCard = ({
   icon: React.ReactNode
   label: string
   value: string
+  subtitle?: string
   gradient: string
   iconBg: string
   trend?: number
@@ -379,6 +386,7 @@ const StatCard = ({
       </div>
       <p className="mt-3 text-sm font-bold text-white/70">{label}</p>
       <p className="mt-1 text-2xl font-black">{value}</p>
+      {subtitle && <p className="mt-0.5 text-xs font-semibold text-white/50">{subtitle}</p>}
     </>
   )
 
@@ -402,56 +410,6 @@ const StatCard = ({
   }
 
   return <article className={baseClassName}>{content}</article>
-}
-
-const statusColors: Record<InvoiceStatus, string> = {
-  Draft: 'bg-slate-400',
-  Sent: 'bg-amber-400',
-  Paid: 'bg-sky-400',
-  InProcessPNR: 'bg-violet-400',
-  PNRIssued: 'bg-indigo-400',
-  Completed: 'bg-emerald-400',
-  VoucherGeneratedPaymentPending: 'bg-fuchsia-400',
-  PaymentDone: 'bg-teal-400',
-}
-
-const statusDotColors: Record<InvoiceStatus, string> = {
-  Draft: 'bg-slate-400',
-  Sent: 'bg-amber-400',
-  Paid: 'bg-sky-400',
-  InProcessPNR: 'bg-violet-400',
-  PNRIssued: 'bg-indigo-400',
-  Completed: 'bg-emerald-400',
-  VoucherGeneratedPaymentPending: 'bg-fuchsia-400',
-  PaymentDone: 'bg-teal-400',
-}
-
-const StatusBar = ({ breakdown, total }: { breakdown: Record<InvoiceStatus, number>; total: number }) => {
-  const entries = (Object.entries(breakdown) as [InvoiceStatus, number][]).filter(([, count]) => count > 0)
-
-  return (
-    <div>
-      <div className="flex h-3 overflow-hidden rounded-full bg-slate-100">
-        {entries.map(([status, count]) => (
-          <div
-            key={status}
-            className={`${statusColors[status]} transition-all duration-700 ease-out first:rounded-l-full last:rounded-r-full`}
-            style={{ width: `${(count / total) * 100}%` }}
-            title={`${invoiceStatusLabels[status]}: ${count}`}
-          />
-        ))}
-      </div>
-      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
-        {entries.map(([status, count]) => (
-          <span key={status} className="inline-flex items-center gap-1.5 text-xs text-slate-600">
-            <span className={`inline-block h-2 w-2 rounded-full ${statusDotColors[status]}`} />
-            <span className="font-semibold">{invoiceStatusLabels[status]}</span>
-            <span className="font-bold text-slate-900">{count}</span>
-          </span>
-        ))}
-      </div>
-    </div>
-  )
 }
 
 /* ─── Payment Category ─── */
@@ -511,6 +469,55 @@ const PaymentCategory = ({
     </Link>
   ) : (
     <article className={className}>{content}</article>
+  )
+}
+
+/* ─── Cult Membership Card ─── */
+const CultMembershipCard = ({
+  totalSales,
+  totalRevenue,
+  totalProfit,
+}: {
+  totalSales: number
+  totalRevenue: number
+  totalProfit: number
+}) => {
+  const totalCost = totalSales * CULT_COST_PER_MEMBERSHIP
+  return (
+    <article className="glass-card hover-lift rounded-xl p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="inline-flex rounded-full px-2.5 py-1 text-xs font-black ring-1 bg-purple-50 text-purple-700 ring-purple-200/80">
+            <Dumbbell size={12} className="mr-1.5" /> Cult Fit Memberships
+          </p>
+          <h3 className="mt-3 text-lg font-black tracking-tight text-slate-950">Cult membership sale</h3>
+        </div>
+        <p className={`text-right text-2xl font-black ${totalProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+          {formatInr(totalProfit)}
+        </p>
+      </div>
+      <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="rounded-lg bg-gradient-to-br from-purple-50 to-white p-3">
+          <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Sales</p>
+          <p className="mt-1 text-xl font-black text-slate-950">{totalSales}</p>
+        </div>
+        <div className="rounded-lg bg-gradient-to-br from-purple-50 to-white p-3">
+          <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Revenue</p>
+          <p className="mt-1 text-xl font-black text-slate-950">{formatInr(totalRevenue)}</p>
+        </div>
+        <div className="rounded-lg bg-gradient-to-br from-purple-50 to-white p-3">
+          <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Cost</p>
+          <p className="mt-1 text-xl font-black text-red-600">{formatInr(totalCost)}</p>
+          <p className="text-[10px] text-slate-400">₹{CULT_COST_PER_MEMBERSHIP} × {totalSales}</p>
+        </div>
+        <div className="rounded-lg bg-gradient-to-br from-purple-50 to-white p-3">
+          <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Profit</p>
+          <p className={`mt-1 text-xl font-black ${totalProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+            {formatInr(totalProfit)}
+          </p>
+        </div>
+      </div>
+    </article>
   )
 }
 

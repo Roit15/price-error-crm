@@ -279,21 +279,39 @@ export const InvoiceFormPage = () => {
                   </p>
                 )}
                 <div className="md:col-span-3 mt-1 rounded-lg border border-emerald-200 bg-emerald-50/50 p-4">
-                  <div className="flex items-center gap-3">
-                    <TextField
-                      label="Advance payment received"
-                      type="number"
-                      min={0}
-                      max={computedTotal}
-                      placeholder="0"
-                      {...form.register('pricing.advancePayment', { valueAsNumber: true })}
-                    />
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-1">
+                        <TextField
+                          label="Advance payment received"
+                          type="number"
+                          min={0}
+                          max={computedTotal}
+                          placeholder="0"
+                          {...form.register('pricing.advancePayment', { valueAsNumber: true })}
+                        />
+                      </div>
+                      <div className="mt-[26px] flex-shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const is20Pct = Math.round(Number(watchedValues.pricing?.advancePayment || 0)) === Math.round(computedTotal * 0.2);
+                            form.setValue('pricing.advancePayment', is20Pct ? 0 : Math.round(computedTotal * 0.2), { shouldDirty: true });
+                          }}
+                          className="inline-flex h-[42px] items-center justify-center rounded-lg border border-emerald-300 bg-white px-3 text-sm font-bold text-emerald-700 shadow-sm transition-colors hover:bg-emerald-50 hover:text-emerald-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                        >
+                          {Math.round(Number(watchedValues.pricing?.advancePayment || 0)) === Math.round(computedTotal * 0.2) 
+                            ? 'Remove 20%' 
+                            : 'Set 20% Advance'}
+                        </button>
+                      </div>
+                    </div>
+                    {Number(watchedValues.pricing?.advancePayment || 0) > 0 && (
+                      <p className="text-sm font-bold text-emerald-700">
+                        Pending: {formatInr(Math.max(0, computedTotal - Number(watchedValues.pricing?.advancePayment || 0)))}
+                      </p>
+                    )}
                   </div>
-                  {Number(watchedValues.pricing?.advancePayment || 0) > 0 && (
-                    <p className="mt-2 text-sm font-bold text-emerald-700">
-                      Pending: {formatInr(Math.max(0, computedTotal - Number(watchedValues.pricing?.advancePayment || 0)))}
-                    </p>
-                  )}
                 </div>
               </div>
             ) : (

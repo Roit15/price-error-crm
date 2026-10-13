@@ -1,5 +1,13 @@
 import type { Invoice, InvoiceStatus } from './invoice'
 
+export const CULT_COST_PER_MEMBERSHIP = 1100
+
+export type CultMembershipStats = {
+  totalSales: number
+  totalRevenue: number
+  totalProfit: number
+}
+
 export type DashboardStats = {
   totalInvoices: number
   revenueCollected: number
@@ -16,6 +24,7 @@ export type DashboardStats = {
   recentInvoices: Invoice[]
   pendingInvoices: Invoice[]
   cultPendingPayments: Invoice[]
+  cultMembership: CultMembershipStats
 }
 
 export type PaymentCategoryStats = {
@@ -68,7 +77,13 @@ export const completedRevenueInMonth = (invoices: Invoice[], monthKey: string) =
 export const buildDashboardStats = (invoices: Invoice[]): DashboardStats => {
   const sortedInvoices = [...invoices].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
   const completedInvoices = invoices.filter((invoice) => invoice.status === 'Completed' || invoice.status === 'PaymentDone')
-  const pendingPaymentInvoices = invoices.filter((invoice) => invoice.status !== 'Completed' && invoice.status !== 'PaymentDone')
+  const pendingPaymentInvoices = invoices.filter(
+    (invoice) =>
+      invoice.status !== 'Completed' &&
+      invoice.status !== 'PaymentDone' &&
+      invoice.invoiceType !== 'DigitalService' &&
+      invoice.pricing.total > (invoice.pricing.advancePayment ?? 0),
+  )
   const completedDigitalServices = completedInvoices.filter((invoice) => invoice.invoiceType === 'DigitalService')
   const completedFlightBookings = completedInvoices.filter((invoice) => invoice.invoiceType === 'FlightTicket')
 
@@ -117,6 +132,7 @@ export const buildDashboardStats = (invoices: Invoice[]): DashboardStats => {
     recentInvoices: sortedInvoices.slice(0, 5),
     pendingInvoices: pendingPaymentInvoices,
     cultPendingPayments: sortedInvoices.filter((i) => i.status === 'VoucherGeneratedPaymentPending'),
+    cultMembership: buildCultMembershipStats(completedInvoices),
   }
 }
 
@@ -124,3 +140,17 @@ const buildPaymentCategoryStats = (invoices: Invoice[]): PaymentCategoryStats =>
   salesCount: invoices.length,
   revenue: invoices.reduce((total, invoice) => total + invoice.pricing.total, 0),
 })
+
+const isCultFitInvoice = (invoice: Invoice) =>
+  invoice.invoiceType === 'DigitalService' &&
+  invoice.digitalService?.itemName?.toLowerCase().startsWith('cult fit')
+
+const buildCultMembershipStats = (completedInvoices: Invoice[]): CultMembershipStats => {
+  const cultInvoices = completedInvoices.filter(isCultFitInvoice)
+  const totalRevenue = cultInvoices.reduce((sum, inv) => sum + inv.pricing.total, 0)
+  return {
+    totalSales: cultInvoices.length,
+    totalRevenue,
+    totalProfit: totalRevenue - cultInvoices.length * CULT_COST_PER_MEMBERSHIP,
+  }
+}
